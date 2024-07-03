@@ -8,7 +8,7 @@ SET PAYS2 = 'BEL'; --code_pays = 'BEL'
 
 --SELECT $dtdeb_EXON, $dtfin_EXON, $dtdeb_EXONm1, $dtfin_EXONm1, $PAYS1, $PAYS2, $ENSEIGNE1, $ENSEIGNE2;
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.STATUT_MAGASIN_FERMES ORDER BY ID_MAGASIN;
+-- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.STATUT_MAGASIN_FERMES ORDER BY ID_MAGASIN;
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_mag_histo_18mth AS
 WITH Magasin AS (
@@ -57,7 +57,7 @@ where vd.date_ticket BETWEEN dateadd('month', -18, date_fermeture_public) AND DA
   ) 
 SELECT * FROM tickets;
 
-SELECT * FROM tab_mag_histo_18mth WHERE code_client='039610000423'; 
+-- SELECT * FROM tab_mag_histo_18mth WHERE code_client='039610000423'; 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_mag_histo_18mth AS
 WITH Magasin AS (
@@ -92,7 +92,7 @@ inner join Magasin b  on a.idorgens_achat = b.ID_ORG_ENSEIGNE and a.idmag_achat 
 INNER JOIN type_mag c on a.idorgens_achat = c.ID_ORG_ENSEIGNE and a.idmag_achat = c.ID_MAGASIN
 ORDER BY 1,2; 
 
-SELECT * FROM stat_mag_histo_18mth; 
+-- SELECT * FROM stat_mag_histo_18mth; 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_mag_histo_18mth_v AS
 SELECT DISTINCT 
@@ -123,7 +123,7 @@ QTE_ACHETE_CLT,
 MARGE_CLT
 FROM stat_mag_histo_18mth;
 
-SELECT * FROM stat_mag_histo_18mth_v ORDER BY id_magasin;
+-- SELECT * FROM stat_mag_histo_18mth_v ORDER BY id_magasin;
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_act_histo AS
 WITH mag_histo AS (SELECT idmag_achat 
@@ -564,7 +564,6 @@ FROM tab1 WHERE lign_mag<=5;
   
   SELECT * FROM stat_mag_vte18mth_glb_mag_mod3 ORDER BY 1,2, nbclt_actif_mag DESC ;
  
- 
   CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_mag_vte18mth_glb_mag_V2_mod3 AS
  WITH tab0 AS (SELECT DISTINCT a.ens_ferm, a.idmag_ferm, a.lib_magasin_ferm, a.type_ferm, a.date_fermeture_public, a.enseigne_actif , a.mag_achat , a.lib_magasin_actif,distanc_Max, a.periode_etud_max, a.delai_reachat_max,
  b.nb_client_potentiel, b.nbclt_actif, a.nbclt_actif_mag, nb_ticket_mag, CA_mag, qte_achete_mag, Marge_mag, 
@@ -578,21 +577,11 @@ ROW_NUMBER() over(partition by idmag_ferm order by nbclt_actif_mag DESC) as lign
 SELECT DISTINCT ens_ferm, idmag_ferm, lib_magasin_ferm, type_ferm, date_fermeture_public, enseigne_actif , mag_achat , lib_magasin_actif,distanc_Max, periode_etud_max, delai_reachat_max,
  nb_client_potentiel, nbclt_actif, nbclt_actif_mag, nb_ticket_mag, CA_mag, qte_achete_mag, Marge_mag,
  nbclt_actif_03mth_mag, nbclt_actif_06mth_mag, nbclt_actif_09mth_mag, nbclt_actif_12mth_mag, nbclt_actif_15mth_mag, lign_mag 
-FROM tab1 WHERE lign_mag<=5; 
-
+FROM tab1 WHERE lign_mag<=5;
 
 SELECT * FROM stat_mag_vte18mth_glb_mag_V2_mod3 ORDER BY ens_ferm, idmag_ferm, lign_mag ; 
-
 SELECT * FROM stat_mag_vte18mth_glb_mag_V2_mod2 ORDER BY ens_ferm, idmag_ferm, lign_mag ; 
-
-SELECT * FROM stat_mag_vte18mth_glb_mag_V2_mod1 ORDER BY ens_ferm, idmag_ferm, lign_mag ; 
-
-
-
-
-
-
-
+SELECT * FROM stat_mag_vte18mth_glb_mag_V2_mod1 ORDER BY ens_ferm, idmag_ferm, lign_mag ;
 
 
 -- synthèse
@@ -831,6 +820,12 @@ SELECT * FROM statgbl_vte18mth_zoom ORDER BY 1,2,3 ;
 SELECT * FROM stat_gbl_vte18mth_glb_v2 ORDER BY 1,2,3; 
 
 
+/**** Mise à jour à Faire sur le projet avec Finalisation 
+ * Pour les clients reactivés, Analyser les indicateurs de performance avant fermeture et comparer au performances après fermeture , 
+ * cela permettra de projeter un CA des clients qui sont reactivés 
+ * Parmi les reactivés , qui sont ceux qui ont acheté uniquement sur le Web ! 
+ * ***/ 
 
 
+ */
 , 

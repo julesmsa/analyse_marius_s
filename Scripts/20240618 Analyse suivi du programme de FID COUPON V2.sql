@@ -32,17 +32,18 @@ CASE WHEN id_macro_segment = '01' THEN '01_VIP'
 From DATA_MESH_PROD_client.SHARED.T_COUPON_DENORMALISEE a
 left join DATA_MESH_PROD_RETAIL.HUB.DMD_MAGASIN b ON a.code_magasin=b.ID_MAGASIN 
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.CLIENT_DENORMALISEE c ON a.CODE_CLIENT = c.CODE_CLIENT
-where code_am IN ('101623','301906','130146','130147','130148','130145') AND YEAR(date_debut_validite)>=2024 and DATE(date_debut_validite)<'2024-06-01'; 
+where code_am IN ('101623','301906','130146','130147','130148','130145') AND YEAR(date_debut_validite)>=2024 and DATE(date_debut_validite)<'2024-06-01';
 
 
 
 
+
+/*
 LEFT join DATA_MESH_PROD_RETAIL.HUB.DMD_MAGASIN c ON t1.id_org_enseigne=c.id_org_enseigne and t1.id_magasin=c.ID_MAGASIN 
 ,type_emplacement,
 CASE WHEN type_emplacement IN ('EC','MP') THEN 'WEB'
 WHEN type_emplacement IN ('PAC','CC', 'CV','CCV') THEN 'MAG' END AS Canal_mag_achat
-
-
+*/
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.tab_tick AS 
 WITH tab0 AS (SELECT t1.id_org_enseigne AS id_enseigne, t1.id_magasin AS id_mag, t1.code_magasin, t1.code_ticket, t1.code_ligne, t1.type_ligne, t1.dateh_ticket, t1.code_date_ticket, t1.code_caisse, t1.code_reference,  

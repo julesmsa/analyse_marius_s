@@ -6,8 +6,19 @@
 -- nombre de clients Club 
 
 SET dtdeb = Date('2023-05-01');
-SET dtfin = DAte('2024-05-31'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
+SET dtfin = DAte('2024-06-30'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
 select $dtdeb, $dtfin;
+
+SELECT FLAG_ACTIF  FROM DATA_MESH_PROD_CLIENT.WORK.CLIENT_DENORMALISEE ;
+
+
+WITH tab0 AS (SELECT DISTINCT Code_client, DATE_DERNIER_ACHAT, STATUT , ID_MACRO_SEGMENT, LIB_MACRO_SEGMENT,flag_actif
+,datediff(YEAR,DATE_DERNIER_ACHAT,$dtfin) AS ACTIF_CLIENT , datediff(MONTH,DATE_DERNIER_ACHAT,$dtfin) AS mois_actif
+FROM DATA_MESH_PROD_CLIENT.WORK.CLIENT_DENORMALISEE 
+WHERE DATE_DERNIER_ACHAT IS NOT NULL AND datediff(MONTH,DATE_DERNIER_ACHAT,$dtfin)<=12 AND date_suppression_client IS NULL )
+SELECT CASE WHEN flag_actif=1 THEN 1 ELSE 0 END AS nhbg, count(DISTINCT code_client) AS nbclt
+FROM tab0
+GROUP BY 1
 
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.CLIENT_DENORMALISEE;
