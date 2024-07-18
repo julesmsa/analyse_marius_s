@@ -129,13 +129,9 @@ FROM tab0
 GROUP BY 1,2)) 
 ORDER BY 1,2; 
 
-SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.STAT_clt_julclub1ans ORDER BY 1,2; 
+SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.STAT_clt_julclub1ans ORDER BY 1,2;
 
-
-
-
- /**** Analyse performance des codes AM sur période  *****/ 
-
+ /**** Analyse performance des codes AM sur période  *****/
  -- Nouvelles vision avec données en provenance de BO 
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.TEMP_COUPON_AM_FID ;
@@ -190,12 +186,14 @@ SELECT DISTINCT CODE_CLIENT , DATE_RECRUTEMENT, ID_MACRO_SEGMENT , LIB_MACRO_SEG
   
   
   SELECT * FROM DATA_MESH_PROD_RETAIL.SHARED.T_VENTE_DENORMALISEE 
+  
+  
   WHERE CODE_AM IN ('130147','130148'); 
  
   SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.VENTE_DENORMALISE 
   WHERE CODE_AM IN ('130147','130148');  
  
- 
+ select * from dhb_prod.acq.stl_remise_detaillees where numoperation  IN ('130147','130148'); 
  
   
    SELECT * FROM DATA_MESH_PROD_client.SHARED.T_COUPON_DENORMALISEE  

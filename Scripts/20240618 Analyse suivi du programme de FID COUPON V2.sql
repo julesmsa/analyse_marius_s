@@ -36,7 +36,7 @@ where code_am IN ('101623','301906','130146','130147','130148','130145') AND YEA
 
 
 
-
+SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.tab_creat_coupon ; 
 
 /*
 LEFT join DATA_MESH_PROD_RETAIL.HUB.DMD_MAGASIN c ON t1.id_org_enseigne=c.id_org_enseigne and t1.id_magasin=c.ID_MAGASIN 
