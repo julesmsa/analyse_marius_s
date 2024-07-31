@@ -8,7 +8,6 @@ SET PAYS2 = 'BEL'; --code_pays = 'BEL'
 -- Date de fin ticket pour avoir des données stables 
 SET dtfin = DAte('2024-07-15'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
 SELECT $dtfin;
- moyenne s
 
 -- Recupération des données sur l'historique de 18 mois avant fermeture du mag 
 -- il s'agit des magasins fermés depuis 2021 
@@ -27,15 +26,6 @@ WHERE type_ferm NOT IN ('Bascule Brice Solo','Jules Plage')),
 tabtg AS (SELECT DISTINCT CODE_CLIENT , DATE_PARTITION , ID_MACRO_SEGMENT, LIB_MACRO_SEGMENT, LIB_SEGMENT_OMNI   
 FROM DATA_MESH_PROD_client.SHARED.T_OBT_CLIENT 
 WHERE id_niveau=5),
-produit as (
-    select distinct ref.ID_REFERENCE, ref.ID_FAMILLE_ACHAT, fam.LIB_FAMILLE_ACHAT,
-        G.LIB_GROUPE_FAMILLE
-    from DATA_MESH_PROD_OFFRE.HUB.DMD_PRD_REFERENCE ref
-    join DATA_MESH_PROD_OFFRE.HUB.DMD_PRD_FAMILLE_ACHAT fam 
-        on ref.ID_FAMILLE_ACHAT = fam.ID_FAMILLE_ACHAT
-    INNER JOIN DATA_MESH_PROD_OFFRE.HUB.DMD_PRD_GROUPE_FAMILLE_ACHAT G
-        ON G.ID_GROUPE_FAMILLE = fam.id_groupe_famille
-    where ref.est_version_courante = 1 and ref.id_marque = 'JUL'),
 tickets as (
 Select   vd.CODE_CLIENT,
 vd.ID_ORG_ENSEIGNE AS idorgens_achat, vd.ID_MAGASIN AS idmag_achat, vd.CODE_MAGASIN AS mag_achat, vd.CODE_CAISSE, vd.CODE_DATE_TICKET, vd.CODE_TICKET, vd.date_ticket, 
@@ -69,13 +59,11 @@ CASE
 	WHEN LIB_SEGMENT_OMNI='WEB' THEN 'OMNI'
 	ELSE LIB_SEGMENT_OMNI END AS SEGMENT_OMNI,
 mag.*, c.type_ferm,
-pdt.ID_FAMILLE_ACHAT, pdt.LIB_FAMILLE_ACHAT, pdt.LIB_GROUPE_FAMILLE,
 MAX(vd.date_ticket) Over (partition by vd.ID_MAGASIN) as max_dte_ticket_mag,
 Min(vd.date_ticket) Over (partition by vd.ID_MAGASIN) as min_dte_ticket_mag
 from DATA_MESH_PROD_RETAIL.WORK.VENTE_DENORMALISE vd
 inner join Magasin mag  on vd.ID_ORG_ENSEIGNE = mag.ID_ORG_ENSEIGNE and vd.ID_MAGASIN = mag.ID_MAGASIN
 INNER JOIN type_mag c on vd.ID_ORG_ENSEIGNE = c.ID_ORG_ENSEIGNE and vd.ID_MAGASIN = c.ID_MAGASIN
-LEFT join produit pdt on vd.CODE_REFERENCE = pdt.ID_REFERENCE
 LEFT JOIN tabtg g ON vd.CODE_CLIENT=g.code_client AND DATE_FROM_PARTS(YEAR(date_fermeture_public) , MONTH(date_fermeture_public), 1)=g.DATE_PARTITION
 where vd.date_ticket BETWEEN dateadd('month', -18, date_fermeture_public) AND DATE(date_fermeture_public) -- ON analyse les ventes sur les 18 mois avant la date de fermeture 
   and (vd.ID_ORG_ENSEIGNE = $ENSEIGNE1 or vd.ID_ORG_ENSEIGNE = $ENSEIGNE2)
@@ -86,8 +74,20 @@ SELECT *,datediff(MONTH ,min_dte_ticket_mag,max_dte_ticket_mag) AS periode_etud 
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_histo_18mth ; 
 
+/* Nous allons selectionner pour chaque client le dernier effet à prendre en compte ***/
+/*** On tient compte de la derniere fermeturedu client  id client = 000110001619*/
 
--- nous ramenons toutes les informations niveau Client 
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_mag_histo_18mths AS
+WITH tab0  AS (SELECT DISTINCT CODE_CLIENT, idmag_achat, date_fermeture_public,date_ouverture_public, 
+MAX(date_fermeture_public) OVER (PARTITION BY CODE_CLIENT) AS max_dateferm,
+MAX(date_ouverture_public) OVER (PARTITION BY CODE_CLIENT) AS max_dateouv
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_histo_18mth
+WHERE CODE_CLIENT IS NOT NULL AND CODE_CLIENT!='0'), 
+tab1 AS (SELECT * FROM Tab0 WHERE date_fermeture_public=max_dateferm AND date_ouverture_public=max_dateouv)
+SELECT a.* 
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_histo_18mth a
+INNER JOIN tab1 b ON a.CODE_CLIENT=b.CODE_CLIENT AND a.idmag_achat=b.idmag_achat
+ORDER BY 1, 2;
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tabclt_mag_histo_18mth AS
 WITH stat0 AS (
@@ -97,14 +97,14 @@ SELECT idorgens_achat, idmag_achat , Code_client
 ,SUM(QUANTITE_LIGNE ) AS qte_achete_clt
 ,SUM(MONTANT_MARGE_SORTIE ) AS Marge_clt	
 ,SUM(montant_remise ) AS Mnt_remise_clt
-FROM tab_mag_histo_18mth 
+FROM tab_mag_histo_18mths 
 WHERE code_client IS NOT NULL AND code_client !='0' AND periode_etud>=15 
 GROUP BY 1,2,3),
 info_mag AS (SELECT DISTINCT idorgens_achat, idmag_achat,  
 TYPE_EMPLACEMENT,LIB_MAGASIN,TYPE_FERM,ID_CONCEPT,LIB_ENSEIGNE,
 GPE_COLLECTIONNING,DATE_OUVERTURE_PUBLIC,DATE_FERMETURE_PUBLIC,SURFACE_COMMERCIALE,
 min_dte_ticket_mag,max_dte_ticket_mag,periode_etud, Code_client, SEGMENT_RFM, SEGMENT_OMNI 
-FROM tab_mag_histo_18mth
+FROM tab_mag_histo_18mths
 WHERE periode_etud>=15)
 SELECT a.*, nb_ticket_clt, CA_clt, qte_achete_clt, Marge_clt, Mnt_remise_clt
 FROM info_mag a
@@ -113,15 +113,14 @@ INNER JOIN stat0 b ON a.idorgens_achat=b.idorgens_achat AND a.idmag_achat=b.idma
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_mag_histo_18mth ; 
 
  -- Information sur la typologie des clients 
-
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_act_histo AS
 WITH mag_histo AS ( SELECT idmag_achat AS idmag_histo
 ,MIN(date_ticket)  AS min_date_ticket_histo
 ,MAX(date_ticket)  AS max_date_ticket_histo
-FROM tab_mag_histo_18mth
+FROM tab_mag_histo_18mths
 WHERE periode_etud>=15
 GROUP BY 1 ),
-clt_mag AS (SELECT DISTINCT code_client, idmag_achat AS idmag_histo FROM tab_mag_histo_18mth 
+clt_mag AS (SELECT DISTINCT code_client, idmag_achat AS idmag_histo FROM tab_mag_histo_18mths 
 WHERE code_client IS NOT NULL AND code_client !='0' ),
 clt_mag_histo AS (
 SELECT a.*, b.code_client AS idclt_histo
@@ -174,6 +173,7 @@ END AS Mag_client
 FROM DATA_MESH_PROD_CLIENT.WORK.stat_act_histo; 
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_act_histo ; 
+
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tabclt_mag_histo_18mth_V2 AS
 SELECT a.*,NB_centre, NB_centre_mag, NB_centre_web, nb_tick_glb_hist, CA_glb_hist, qte_glb_hist, Marge_glb_hist,
@@ -422,7 +422,7 @@ LEFT JOIN tickets tic ON mag.id_client=tic.CODE_CLIENT AND date_ticket BETWEEN d
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext ORDER BY 1; 
 
 -- creation de la table client next 18 mois 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_mag_histo_18mth_V2;
+--- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_mag_histo_18mth_V2;
 
 
 --  Statistique Global des magasins sur 18 mois après fermeture
@@ -610,11 +610,9 @@ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_mag_histo_18mth_V2;
   ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='WEB' THEN MONTANT_MARGE_SORTIE END) AS Marge_clt_web
   FROM tab_ticket_18mthnext
   GROUP BY 1,2)
-  ORDER BY 1,2); 
-
+  ORDER BY 1,2);
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_gbl_vte18mth_glb_v1 ORDER BY 1,2 ; 
-
 
 
  -- Infomation Stat Global par Typo magasins 
@@ -1096,7 +1094,6 @@ SELECT a.*, ROUND(b.distanc_mag) AS distanc_mag
 FROM tab1 a 
 LEFT JOIN tab0 b ON a.id_ref_mag_achat=b.id_ref_mag;
 
-
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v ORDER BY 1,2 , nbclt_mag desc ; 
 
 -- rajout des elements sur le nombre de client potentiel et le nombre de client activés au global 
@@ -1113,7 +1110,6 @@ LEFT JOIN react b ON a.ens_ferm=b.ens_ferm AND a.idmag_ferm=b.idmag_ferm ;
 
 SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v2 ; 
 
-
  CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v3 AS
  WITH tab0 AS (SELECT DISTINCT 
  ens_ferm, idmag_ferm, lib_magasin_ferm,
@@ -1129,46 +1125,13 @@ SELECT DISTINCT  ens_ferm, idmag_ferm, lib_magasin_ferm,
 type_ferm, date_fermeture_public, idorgens_achat, idmag_achat, lib_magasin_achat, perimetre_achat, distanc_mag, 
 nb_client_potentiel, nbclt_actif, nbclt_mag, nb_ticket_mag, ca_mag, 
 qte_achete_clt, marge_clt, mnt_remise_clt, lign_mag 
-FROM tab1 WHERE lign_mag<=10; 
-
+FROM tab1 WHERE lign_mag<=10;
 
 SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v3 order BY idmag_ferm , nbclt_mag DESC;
 
+--- Analyse de la distance avec le magasin de reachat
 
-tabclt_ticket_18mthnext_v2 
-
---- Analyse de la distance avec le magasin de reachat 
-
-CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.statmag_18mthnext AS
-SELECT ens_ferm, idmag_ferm, idorgens_achat, idmag_achat,lib_magasin_achat, PERIMETRE_achat   
-,min(Date_ticket) AS min_dtHA_ticket_clt
-,max(Date_ticket) AS max_dtHA_ticket_clt
-,Count(DISTINCT code_client) AS nbclt_mag
-,Count(DISTINCT id_ticket) AS nb_ticket_mag
-,SUM(MONTANT_TTC ) AS CA_mag
-,SUM(QUANTITE_LIGNE ) AS qte_achete_clt
-,SUM(MONTANT_MARGE_SORTIE ) AS Marge_clt	
-,SUM(montant_remise ) AS Mnt_remise_clt
-FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext
-GROUP BY ens_ferm, idmag_ferm, idorgens_achat, idmag_achat,lib_magasin_achat, PERIMETRE_achat ;
-
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext ; 
-
-
-
-WITH tab0 AS (SELECT DISTINCT id_ref_mag,distanc_mag 
-FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_distance),
-tab1 AS (SELECT *, 
-concat(ens_ferm,'_',idmag_ferm,'_',IDORGENS_ACHAT,'_',IDMAG_ACHAT) AS id_ref_mag_achat
-FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext), 
-tab2 AS (SELECT a.*, ROUND(b.distanc_mag) AS distanc_mag
-FROM tab1 a 
-LEFT JOIN tab0 b ON a.id_ref_mag_achat=b.id_ref_mag)
-
-
-;
-
-
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext; 
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v2 WHERE IDMAG_FERM =19;
 
@@ -1203,5 +1166,31 @@ CASE WHEN perimetre_achat='WEB' THEN 'a-Achat WEB'
 FROM tab2
   GROUP BY 1,2,3; 
   
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_gbl_mag_distanc ORDER BY 1,2,3; 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_gbl_mag_distanc ORDER BY 1,2,3;
 
+-- Statistiques global de reachat client 
+SELECT MAG_CLIENT, type_ferm 
+  ,COUNT(DISTINCT IDMAG_FERM) AS nb_mag_ferm 
+  ,Count(DISTINCT id_client ) AS nb_client_potentiel
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' THEN code_client END ) AS nbclt_actif
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' THEN id_ticket END) AS nb_ticket_clt
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' THEN MONTANT_TTC END) AS CA_clt
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' THEN QUANTITE_LIGNE END) AS qte_achete_clt
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' THEN MONTANT_MARGE_SORTIE END) AS Marge_clt
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND delai_reachat IS NOT NULL AND delai_reachat BETWEEN 0 AND 3 THEN code_client END ) AS nbclt_actif_03mth
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND delai_reachat IS NOT NULL AND delai_reachat BETWEEN 0 AND 6 THEN code_client END ) AS nbclt_actif_06mth
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND delai_reachat IS NOT NULL AND delai_reachat BETWEEN 0 AND 9 THEN code_client END ) AS nbclt_actif_09mth
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND delai_reachat IS NOT NULL AND delai_reachat BETWEEN 0 AND 12 THEN code_client END ) AS nbclt_actif_12mth
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND delai_reachat IS NOT NULL AND delai_reachat BETWEEN 0 AND 15 THEN code_client END ) AS nbclt_actif_15mth   
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='MAG' THEN code_client END ) AS nbclt_actif_mag
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='MAG' THEN id_ticket END) AS nb_ticket_clt_mag
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='MAG' THEN MONTANT_TTC END) AS CA_clt_mag
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='MAG' THEN QUANTITE_LIGNE END) AS qte_achete_clt_mag
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='MAG' THEN MONTANT_MARGE_SORTIE END) AS Marge_clt_mag
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='WEB' THEN code_client END ) AS nbclt_actif_web
+  ,Count(DISTINCT CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='WEB' THEN id_ticket END) AS nb_ticket_clt_web
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='WEB' THEN MONTANT_TTC END) AS CA_clt_web
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='WEB' THEN QUANTITE_LIGNE END) AS qte_achete_clt_web
+  ,SUM(CASE WHEN code_client IS NOT NULL AND code_client !='0' AND PERIMETRE_achat='WEB' THEN MONTANT_MARGE_SORTIE END) AS Marge_clt_web
+  FROM tab_ticket_18mthnext
+  GROUP BY 1,2,3)
