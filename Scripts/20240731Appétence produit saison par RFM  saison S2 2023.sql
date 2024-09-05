@@ -1,3 +1,5 @@
+-- appétence produit x RFM saison S2 2023
+
 /*** Demande d'analyse Client 
  * Appétence produit/saison par RFM
  * En tant que responsable de l'animation commerciale, je souhaite pouvoir connaître l'appétence des clients (par segment RFM)
@@ -6,8 +8,8 @@
 
 /**** analyse sur N versus N-1 ***/
 
-SET dtdeb = Date('2024-01-01');
-SET dtfin = DAte('2024-06-30'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
+SET dtdeb = Date('2023-07-01');
+SET dtfin = DAte('2023-12-31'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
 select $dtdeb, $dtfin;
 
 SET dtdeb_Nm1 = to_date(dateadd('year', -1, $dtdeb));

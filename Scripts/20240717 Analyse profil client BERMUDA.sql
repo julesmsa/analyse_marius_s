@@ -3,7 +3,7 @@
 -- Parametre des dates 
 SET dtdeb = Date('2024-01-01');
 SET dtfin = DAte('2024-06-30');
-SET tag_etud='Bermuda';
+-- SET tag_etud='Bermuda';
 
 
 SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
@@ -888,16 +888,18 @@ FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
   -- Calcul des indicateurs
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL AS  
   WITH tab0 AS (SELECT *, 
+ MAX(nb_clt_ref) OVER() AS max_clt_ref,
+ MAX(nb_clt_glb) OVER() AS max_clt_glb,  
  SUM(CASE WHEN modalite NOT IN ('03-Autres/NC','09_Non_Segmentes','12_NOSEG','99-NON RENSEIGNE','z: Non def','99-NR/NC','Z-NON RENSEIGNE','Z-NC/NR') THEN nb_clt_ref end) OVER (Partition BY typo_clt) AS soustot_ref,
  SUM(nb_clt_ref) OVER (Partition BY typo_clt) AS tot_ref, 
  SUM(CASE WHEN modalite NOT IN ('03-Autres/NC','09_Non_Segmentes','12_NOSEG','99-NON RENSEIGNE','z: Non def','99-NR/NC','Z-NON RENSEIGNE','Z-NC/NR') THEN nb_clt_glb end) OVER (Partition BY typo_clt) AS soustot_glb,
  SUM(nb_clt_glb) OVER (Partition BY typo_clt) AS tot_glb
      FROM DATA_MESH_PROD_CLIENT.WORK.KPICLT_BASE_TICKETS ORDER BY 1,2 ),
 tab1 AS (SELECT *, 
-CASE WHEN modalite IN ('03-Autres/NC','09_Non_Segmentes','12_NOSEG','99-NON RENSEIGNE','z: Non def','99-NR/NC','Z-NON RENSEIGNE','Z-NC/NR','99_AUTRES/NC') THEN tot_ref ELSE soustot_ref END AS total_ref,
-CASE WHEN modalite IN ('03-Autres/NC','09_Non_Segmentes','12_NOSEG','99-NON RENSEIGNE','z: Non def','99-NR/NC','Z-NON RENSEIGNE','Z-NC/NR','99_AUTRES/NC') THEN tot_glb ELSE soustot_glb END AS total_glb,
-FROM tab0)
-SELECT * 
+CASE WHEN modalite IN ('03-Autres/NC','09_Non_Segmentes','12_NOSEG','99-NON RENSEIGNE','z: Non def','99-NR/NC','Z-NON RENSEIGNE','Z-NC/NR','99_AUTRES/NC') THEN max_clt_ref ELSE LEAST(soustot_ref,max_clt_ref) END AS total_ref,
+CASE WHEN modalite IN ('03-Autres/NC','09_Non_Segmentes','12_NOSEG','99-NON RENSEIGNE','z: Non def','99-NR/NC','Z-NON RENSEIGNE','Z-NC/NR','99_AUTRES/NC') THEN max_clt_glb ELSE LEAST(soustot_glb,max_clt_glb) END AS total_glb
+FROM tab0),
+trgfd AS (SELECT * 
 ,CASE WHEN nb_clt_glb IS NOT NULL AND nb_clt_glb>0 THEN Round(nb_clt_ref/nb_clt_glb,4) END AS part_clt_ref
 ,CASE WHEN total_ref IS NOT NULL AND total_ref>0 THEN Round(nb_clt_ref/total_ref,4) END AS poids_clt_ref
 ,CASE WHEN nb_clt_ref IS NOT NULL AND nb_clt_ref>0 THEN Round(CA_ref/nb_clt_ref,4) END AS CA_par_clt_ref
@@ -915,7 +917,52 @@ SELECT *
 ,CASE WHEN qte_achete_glb IS NOT NULL AND qte_achete_glb>0 THEN Round(CA_glb/qte_achete_glb,4) END AS pvm_clt_glb      
 ,CASE WHEN CA_glb IS NOT NULL AND CA_glb>0 THEN Round(Marge_glb/CA_glb,4) END AS txmarge_clt_glb   
 ,CASE WHEN CA_glb IS NOT NULL AND CA_glb>0 THEN Round(Mnt_remise_glb/(CA_glb + Mnt_remise_glb),4) END AS txremise_clt_glb
-FROM tab1 ORDER BY 1,2;
+FROM tab1 ORDER BY 1,2)
+SELECT DISTINCT 
+TYPO_CLT,
+MODALITE,
+MIN_DATE_TICKET,
+MAX_DATE_TICKET,
+NB_CLT_REF,
+NB_TICKET_REF,
+CA_REF,
+QTE_ACHETE_REF,
+MARGE_REF,
+MNT_REMISE_REF,
+NB_NEWCLT_REF,
+NB_CLT_GLB,
+NB_TICKET_GLB,
+CA_GLB,
+QTE_ACHETE_GLB,
+MARGE_GLB,
+MNT_REMISE_GLB,
+NB_NEWCLT,
+AGE_MOYEN_REF,
+AGE_MOYEN,
+SOUSTOT_REF,
+TOT_REF,
+SOUSTOT_GLB,
+TOT_GLB,
+TOTAL_REF,
+TOTAL_GLB,
+PART_CLT_REF,
+POIDS_CLT_REF,
+CA_PAR_CLT_REF,
+FREQ_CLT_REF,
+PANIER_CLT_REF,
+IDV_CLT_REF,
+PVM_CLT_REF,
+TXMARGE_CLT_REF,
+TXREMISE_CLT_REF,
+POIDS_CLT_GLB,
+CA_PAR_CLT_GLB,
+FREQ_CLT_GLB,
+PANIER_CLT_GLB,
+IDV_CLT_GLB,
+PVM_CLT_GLB,
+TXMARGE_CLT_GLB,
+TXREMISE_CLT_GLB
+FROM trgfd ; 
 
 SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL ORDER BY 1,2; 
 
