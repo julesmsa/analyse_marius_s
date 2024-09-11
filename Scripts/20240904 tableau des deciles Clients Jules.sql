@@ -19,8 +19,6 @@ LIMIT
   10;
 ***/ 
 
--- traitement des CODE_AM 
-
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.tab_remise_CODEAM AS 
 WITH tab_rem AS (SELECT CONCAT(t2.id_org_enseigne,'-',t2.id_magasin,'-',t2.code_caisse,'-',t2.code_date_ticket,'-',t2.code_ticket) as id_ticket_lign,
 CAST (NUMERO_OPERATION AS VARCHAR(10))  AS CODE_AM_V,
@@ -53,7 +51,9 @@ vd.QUANTITE_LIGNE,
 vd.MONTANT_MARGE_SORTIE,
 vd.libelle_type_ticket, 
 vd.id_ticket, 
-CODE_AM, 
+CODE_EVT_PROMO, MONTANT_SOLDE,
+CODE_AM, CODE_OPE_COMM,
+MONTANT_REMISE_OPE_COMM,
 CODE_COUPON1, CODE_COUPON2, CODE_COUPON3, CODE_COUPON4, CODE_COUPON5, 
 MTREMISE_COUPON1, MTREMISE_COUPON2, MTREMISE_COUPON3, MTREMISE_COUPON4, MTREMISE_COUPON5,
 CODEACTIONMARKETING_COUPON1, CODEACTIONMARKETING_COUPON2, CODEACTIONMARKETING_COUPON3, CODEACTIONMARKETING_COUPON4, CODEACTIONMARKETING_COUPON5,
@@ -73,21 +73,20 @@ SUM(CASE
 CASE 
     WHEN PERIMETRE = 'WEB' AND libelle_type_ligne ='Retour' THEN 1 
     WHEN EST_MDON_CKDO=True THEN 1 
-    --WHEN REFCO IN (select distinct CONCAT(ID_REFERENCE,'_',ID_COULEUR) 
-     --               from DHB_PROD.DNR.DN_PRODUIT
-      --              where ID_TYPE_ARTICLE<>1
-     --               and id_marque='JUL')
-      --  THEN 1         
+    WHEN REFCO IN (select distinct CONCAT(ID_REFERENCE,'_',ID_COULEUR) 
+                   from DHB_PROD.DNR.DN_PRODUIT
+                   where ID_TYPE_ARTICLE<>1
+                    and id_marque='JUL')
+        THEN 1         
     ELSE 0 END AS annul_ticket,     
 SUM(CASE 
-    WHEN annul_ticket= 0     THEN montant_remise END ) OVER (PARTITION BY id_ticket) AS Remise_nette   
+    WHEN annul_ticket= 0 THEN montant_remise END ) OVER (PARTITION BY id_ticket) AS Remise_nette   
 from DHB_PROD.DNR.DN_VENTE vd
 where vd.date_ticket BETWEEN DATE($dtfin_Nm1) AND DATE($dtfin - 1) 
   and (vd.ID_ORG_ENSEIGNE = $ENSEIGNE1 or vd.ID_ORG_ENSEIGNE = $ENSEIGNE2)
   and (vd.code_pays = $PAYS1 or vd.code_pays = $PAYS2) AND (VD.CODE_CLIENT IS NOT NULL AND VD.CODE_CLIENT !='0')
   AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') ;
   -- AND id_ticket='1-855-2-20240615-24167006' exemple de ticket avec 3 code AM ;
-
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket ;
 
@@ -130,6 +129,7 @@ SUM(CASE WHEN annul_ticket=0 THEN MONTANT_TTC END) AS Mtn_Gbl,
 SUM(CASE WHEN annul_ticket=0 THEN QUANTITE_LIGNE END ) AS Qte_Gbl,
 SUM(CASE WHEN annul_ticket=0 THEN MONTANT_MARGE_SORTIE END ) AS Marge_Gbl,
 SUM(CASE WHEN annul_ticket=0 THEN montant_remise END) AS Rem_Gbl,
+SUM(CASE WHEN annul_ticket=0 THEN MONTANT_REMISE_OPE_COMM END) AS Rem_OPE_COMM,
 FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket
 GROUP BY 1
 HAVING Mtn_Gbl>=1
@@ -165,10 +165,11 @@ SUM(nb_ticket_Gbl) AS Nb_Ticket,
 SUM(Mtn_Gbl) AS CA_clt,
 SUM(Qte_Gbl) AS Quantite,
 SUM(Marge_Gbl) AS Marge,
-SUM(Rem_Gbl) AS Mnt_Remise,
+SUM(Rem_Gbl) AS Mnt_Remise_clt,
 SUM(rem_Club) AS Mnt_Remise_Club,
 SUM(rem_Plan_co) AS Mnt_Remise_Plan_co,
 SUM(rem_Desto) AS Mnt_Remise_Desto,
+SUM(Rem_OPE_COMM) AS Mnt_Remise_Markdown,
 ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy,
 ROUND (AVG (anciennete_client),1) AS anciennete_moy,
 Count(DISTINCT CASE WHEN Type_client='02-Nouveaux'  THEN CODE_CLIENT END ) AS Nb_newclt 
@@ -185,6 +186,7 @@ SUM(Rem_Gbl) AS Mnt_Remise,
 SUM(rem_Club) AS Mnt_Remise_Club,
 SUM(rem_Plan_co) AS Mnt_Remise_Plan_co,
 SUM(rem_Desto) AS Mnt_Remise_Desto,
+SUM(Rem_OPE_COMM) AS Mnt_Remise_Markdown,
 ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy,
 ROUND (AVG (anciennete_client),1) AS anciennete_moy,
 Count(DISTINCT CASE WHEN Type_client='02-Nouveaux'  THEN CODE_CLIENT END ) AS Nb_newclt 
@@ -194,8 +196,6 @@ ORDER BY 1;
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Nm1 ORDER BY 1; 
 
-
-SELECT * FROM DHB_PROD.DNR.DN_CLIENT; 
 
 
 
