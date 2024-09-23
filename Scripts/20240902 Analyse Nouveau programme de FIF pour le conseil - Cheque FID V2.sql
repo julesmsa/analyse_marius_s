@@ -110,10 +110,7 @@ LEFT JOIN segrfm g ON a.CODE_CLIENT=g.CODE_CLIENT
 LEFT JOIN segomni f ON a.CODE_CLIENT=f.CODE_CLIENT 
 where Top_period=1;
 
-SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.tab_creat_coupon_N ; 
-
-SELECT code_am, count(DISTINCT code_coupon) AS nbcoupon FROM DATA_MESH_PROD_RETAIL.WORK.tab_creat_coupon_N 
-GROUP BY 1; 
+SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.tab_creat_coupon_N ;
 
 
 
@@ -470,55 +467,4 @@ GROUP BY 1,2,3,4);
 
 
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_coupon_N ORDER BY 1,2,3,4 ;
-
-/*
---- Detection probleme utilisation des codes coupons 130148
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_N WHERE CODe_AM='130148'; 
-
-SELECT * FROM tab_list_coupon_N WHERE CODEACTIONMARKETING_COUPON='130148'; 
-
-SELECT * FROM dhb_prod.hub.f_vte_remise_detaillee 
-WHERE NUMERO_OPERATION = 130148
-
-SELECT *,
-CONCAT(id_org_enseigne,'-',id_magasin,'-',code_caisse,'-',code_date_ticket,'-',code_ticket) as id_ticket_ligt2
-FROM dhb_prod.hub.f_vte_remise_detaillee 
-WHERE NUMERO_OPERATION = 130148 AND id_ticket_ligt2 = '1-600-1-20240821-4841644' 
-ORDER BY CODE_LIGNE 
-
-
--- 1-600-1-20240820-4840470  /  1-600-1-20240820-4841158  / 1-600-1-20240821-4841644 
-
-SELECT * FROM  DHB_PROD.DNR.DN_VENTE
-WHERE id_ticket = '1-600-1-20240821-4841644'
-
-SELECT *,
-CONCAT(id_org_enseigne,'-',id_magasin,'-',code_caisse,'-',code_date_ticket,'-',code_ticket) as id_ticket_ligt2
-FROM  DHB_PROD.HUB.f_vte_ticket_ligne_v2
-WHERE id_ticket_ligt2 = '1-600-1-20240821-4841644'
-
-WHERE CODE_DATE_TICKET = 20240727 AND CODE_TICKET = 4814318 AND ID_ORG_ENSEIGNE =1 AND ID_MAGASIN =600 AND CODE_CAISSE = 1 
-
-SELECT * FROM dhb_prod.hub.f_vte_remise WHERE CODE_DATE_TICKET = '20240727' AND CODE_TICKET = 4814318 AND ID_ORG_ENSEIGNE =1 AND ID_MAGASIN =600 AND CODE_CAISSE = 1 
-
-SELECT * FROM dhb_prod.hub.f_vte_remise WHERE CODE_TICKET = 4814318
-
-
-CODe_AM='130147'
-
-SELECT Count (DISTINCT code_coupon) AS nbcp FROM dhb_prod.hub.f_vte_remise WHERE CODe_AM='130147' ;
-
-/* 
- 
-
-
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_N WHERE CODe_AM='130147'; 
-
-
-SELECT * FROM tab_list_coupon_N WHERE CODEACTIONMARKETING_COUPON='130147'; 
-
-
-SELECT * FROM dhb_prod.hub.f_vte_remise_detaillee WHERE NUMERO_OPERATION = 130148
-
-SELECT * FROM dhb_prod.hub.F_VTE_TICKET_LIGNE_V2  WHERE CODE_AM = 130148 ; 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_coupon_N ORDER BY 1,2,3,4 ; 

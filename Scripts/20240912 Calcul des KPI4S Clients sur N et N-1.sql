@@ -17,14 +17,7 @@ WITH info_clt AS (
         id_titre, 
         date_naissance, 
         age, 
-        gender, 
-        est_valide_telephone, 
-        est_optin_sms_com, 
-        est_optin_sms_fid, 
-        est_optin_email_com, 
-        est_optin_email_fid, 
-        code_postal, 
-        code_pays AS pays_clt, 
+        genre, 
         date_recrutement
     FROM  DHB_PROD.DNR.DN_CLIENT
     WHERE (code_pays = $PAYS1 OR code_pays = $PAYS2) 
@@ -115,5 +108,102 @@ WHERE PERIMETRE = 'MAG'
     
     
     
+    -- Test sur KPI's CLient Versus NoStress 
     
+    -- Test sur 1 mois dhistorique Ventes 
+    
+SET dtdeb = Date('2024-08-01');
+SET dtfin = DAte('2024-08-31');
 
+SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
+SET ENSEIGNE2 = 3;
+SET PAYS1 = 'FRA'; --code_pays = 'FRA'
+SET PAYS2 = 'BEL'; --code_pays = 'BEL'   
+
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml AS
+Select   vd.CODE_CLIENT,
+vd.ID_ORG_ENSEIGNE, vd.ID_MAGASIN AS mag_achat, vd.CODE_MAGASIN, vd.CODE_CAISSE, vd.CODE_DATE_TICKET, vd.CODE_TICKET, vd.date_ticket, 
+vd.MONTANT_TTC,vd.MONTANT_TTC_eur,
+vd.code_ligne, vd.type_ligne, vd.libelle_type_ligne, 
+vd.code_type_article, vd.code_ligne_taille, vd.code_grille_taille, vd.code_coloris, vd.CODE_REFERENCE, vd.code_marque,
+CONCAT(vd.CODE_REFERENCE,'_',vd.CODE_COLORIS) AS REFCO,
+vd.prix_unitaire, vd.montant_remise,  MONTANT_REMISE_OPE_COMM,
+vd.montant_remise + MONTANT_REMISE_OPE_COMM AS remise_totale,
+vd.QUANTITE_LIGNE,
+vd.MONTANT_MARGE_SORTIE,
+vd.libelle_type_ticket, 
+vd.id_ticket, type_emplacement,
+CASE WHEN type_emplacement IN ('EC','MP') THEN 'WEB'
+WHEN type_emplacement IN ('PAC','CC', 'CV','CCV') THEN 'MAG' END AS PERIMETRE,
+vd.code_pays,
+vd.LIB_FAMILLE_ACHAT, 
+prix_unitaire_base_eur,   
+ROW_NUMBER() OVER (PARTITION BY CODE_CLIENT ORDER BY CONCAT(code_ligne,ID_TICKET)) AS nb_lign,
+SUM(CASE 
+    WHEN lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') 
+    THEN QUANTITE_LIGNE END ) OVER (PARTITION BY id_ticket) AS Qte_pos, 
+1 AS top_lign,    
+CASE WHEN Qte_pos>0 THEN 1 ELSE 0 END AS top_Qte_pos,
+CASE WHEN lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') THEN 1 ELSE 0 END AS exclu_famill,
+CASE 
+    WHEN PERIMETRE = 'WEB' AND libelle_type_ligne ='Retour' THEN 1 
+    WHEN EST_MDON_CKDO=True THEN 1 
+    WHEN REFCO IN (select distinct CONCAT(ID_REFERENCE,'_',ID_COULEUR) 
+                    from DHB_PROD.DNR.DN_PRODUIT
+                    where ID_TYPE_ARTICLE<>1
+                    and id_marque='JUL')
+        THEN 1  ELSE 0 END AS annul_ticket        
+from DHB_PROD.DNR.DN_VENTE vd
+where vd.date_ticket BETWEEN DATE($dtdeb) AND DATE($dtfin) 
+  and (vd.ID_ORG_ENSEIGNE = $ENSEIGNE1 or vd.ID_ORG_ENSEIGNE = $ENSEIGNE2)
+  and (vd.code_pays = $PAYS1 or vd.code_pays = $PAYS2) 
+  -- AND (VD.CODE_CLIENT IS NOT NULL AND VD.CODE_CLIENT !='0')
+  -- AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') 
+;
+  
+ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml ;  
+  
+
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_TICKETS_Sml AS
+SELECT * FROM 
+(SELECT '01-SANS FILTRE' AS typo
+    ,COUNT(DISTINCT id_ticket) AS nb_ticket_glb
+    ,SUM(MONTANT_TTC_eur) AS CA_glb
+	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
+    ,SUM(montant_remise) AS Mnt_remise_mkt 
+    ,SUM(remise_totale) AS Mnt_remise_glb 
+FROM  DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml
+GROUP BY 1
+UNION
+SELECT '02-NO STRESS' AS typo
+,Count(DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end ) AS nb_ticket_glb
+,SUM(CASE WHEN annul_ticket=0 THEN MONTANT_TTC end) AS CA_glb
+,SUM(CASE WHEN annul_ticket=0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+,SUM(CASE WHEN annul_ticket=0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+,SUM(CASE WHEN annul_ticket=0 THEN montant_remise end) AS Mnt_remise_mkt
+,SUM(CASE WHEN annul_ticket=0 THEN remise_totale end) AS Remise_glb
+FROM  DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml
+GROUP BY 1)
+ORDER BY 1,2 ; 
+
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_TICKETS_Sml ORDER BY 1,2 ;  
+
+ 
+  
+SELECT top_lign, top_Qte_pos, exclu_famill, annul_ticket
+    ,COUNT( DISTINCT CASE WHEN CODE_CLIENT IS NOT NULL AND CODE_CLIENT !='0' THEN  CODE_CLIENT END) AS nb_clt_distinct
+    ,COUNT(DISTINCT id_ticket) AS nb_ticket_glb
+    ,SUM(MONTANT_TTC_eur) AS CA_glb
+	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
+    ,SUM(montant_remise) AS Mnt_remise_glb 
+FROM  tickets
+GROUP BY 1,2,3,4
+ORDER BY 1,2,3,4 ; 
+
+    
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml ORDER BY 1,2,3,4 ;

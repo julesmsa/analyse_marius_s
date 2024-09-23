@@ -13,11 +13,7 @@ SET PAYS2 = 'BEL'; --code_pays = 'BEL'
 
 SELECT $dtfin, $dtfin_Nm1, $dtfin_Nm2, $PAYS1, $PAYS2, $ENSEIGNE1, $ENSEIGNE2;
 
-/*** Liste des codes AM à catégoriser 
-SELECT * FROM   DATA_MESH_PROD_RETAIL.WORK.LISTE_CODE_AM_JULES where CODE_AM='108250'
-LIMIT
-  10;
-***/ 
+/*** Liste des codes AM à catégoriser ***/
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.tab_remise_CODEAM AS 
 WITH tab_rem AS (SELECT CONCAT(t2.id_org_enseigne,'-',t2.id_magasin,'-',t2.code_caisse,'-',t2.code_date_ticket,'-',t2.code_ticket) as id_ticket_lign,
@@ -37,6 +33,8 @@ FROM tab0
 GROUP BY 1,2)
 select * FROM tab1
 pivot (SUM(Mnt_Remise_CODEAM) for type_remiseV2 in ('CLUB','Plan_co','Desto','Autre'));
+
+SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.tab_remise_CODEAM ; 
 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_ticket AS
@@ -58,6 +56,7 @@ CODE_COUPON1, CODE_COUPON2, CODE_COUPON3, CODE_COUPON4, CODE_COUPON5,
 MTREMISE_COUPON1, MTREMISE_COUPON2, MTREMISE_COUPON3, MTREMISE_COUPON4, MTREMISE_COUPON5,
 CODEACTIONMARKETING_COUPON1, CODEACTIONMARKETING_COUPON2, CODEACTIONMARKETING_COUPON3, CODEACTIONMARKETING_COUPON4, CODEACTIONMARKETING_COUPON5,
 type_emplacement,
+vd.montant_remise + MONTANT_REMISE_OPE_COMM AS remise_totale,
 CASE WHEN type_emplacement IN ('EC','MP') THEN 'WEB'
 WHEN type_emplacement IN ('PAC','CC', 'CV','CCV') THEN 'MAG' END AS PERIMETRE,
 vd.code_pays,
@@ -86,7 +85,9 @@ where vd.date_ticket BETWEEN DATE($dtfin_Nm1) AND DATE($dtfin - 1)
   and (vd.ID_ORG_ENSEIGNE = $ENSEIGNE1 or vd.ID_ORG_ENSEIGNE = $ENSEIGNE2)
   and (vd.code_pays = $PAYS1 or vd.code_pays = $PAYS2) AND (VD.CODE_CLIENT IS NOT NULL AND VD.CODE_CLIENT !='0')
   AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') ;
-  -- AND id_ticket='1-855-2-20240615-24167006' exemple de ticket avec 3 code AM ;
+  
+ 
+ -- AND id_ticket='1-855-2-20240615-24167006' exemple de ticket avec 3 code AM ;
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket ;
 
@@ -95,13 +96,15 @@ WITH tabc AS (
 SELECT DISTINCT CODE_CLIENT, id_ticket , b.*
 FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket a
 LEFT JOIN DATA_MESH_PROD_RETAIL.WORK.tab_remise_CODEAM b ON a.id_ticket=b.id_ticket_lign)
-SELECT CODE_CLIENT , 
+SELECT CODE_CLIENT, 
 SUM("'CLUB'") AS rem_Club,
 SUM("'Plan_co'") AS rem_Plan_co,
 SUM("'Desto'") AS rem_Desto,
 SUM("'Autre'") AS rem_Autre
 FROM tabc
 GROUP BY 1 ; 
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_rem_Clt; 
 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_infoclt AS
@@ -123,6 +126,14 @@ WITH info_clt AS (
     FROM DHB_PROD.DNR.DN_CLIENT
     WHERE CODE_CLIENT IN ( SELECT DISTINCT CODE_CLIENT FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket)
 ),
+segrfm AS (SELECT DISTINCT CODE_CLIENT, ID_MACRO_SEGMENT, LIB_MACRO_SEGMENT 
+FROM DATA_MESH_PROD_CLIENT.SHARED.DMD_SEGMENT_RFM
+WHERE DATE_DEBUT <= DATE($dtfin)
+AND (DATE_FIN > DATE($dtfin) OR DATE_FIN IS NULL) ),
+segomni AS (SELECT DISTINCT CODE_CLIENT, LIB_SEGMENT_OMNI 
+FROM DATA_MESH_PROD_CLIENT.SHARED.DMD_SEGMENT_OMNI 
+WHERE DATE_DEBUT <= DATE($dtfin)
+AND (DATE_FIN > DATE($dtfin) OR DATE_FIN IS NULL) ),
 Stat_clt AS ( SELECT CODE_CLIENT,
 COUNT(DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket END ) AS nb_ticket_Gbl,
 SUM(CASE WHEN annul_ticket=0 THEN MONTANT_TTC END) AS Mtn_Gbl,
@@ -149,16 +160,35 @@ SELECT a.* , rem_Club, rem_Plan_co, rem_Desto, rem_Autre, c.*,
         WHEN anciennete_client IS NOT NULL AND anciennete_client BETWEEN 49 AND 60 THEN 'e: ]48-60] mois'
         WHEN anciennete_client IS NOT NULL AND anciennete_client > 60 THEN 'f: + de 60 mois'
         ELSE 'z: Non def' 
-    END AS Tr_anciennete
+    END AS Tr_anciennete , 
+ID_MACRO_SEGMENT, LIB_MACRO_SEGMENT, LIB_SEGMENT_OMNI, 
+CASE WHEN g.id_macro_segment = '01' THEN '01_VIP' 
+     WHEN g.id_macro_segment = '02' THEN '02_TBC'
+     WHEN g.id_macro_segment = '03' THEN '03_BC'
+     WHEN g.id_macro_segment = '04' THEN '04_MOY'
+     WHEN g.id_macro_segment = '05' THEN '05_TAP'
+     WHEN g.id_macro_segment = '06' THEN '06_TIEDE'
+     WHEN g.id_macro_segment = '07' THEN '07_TPURG'
+     WHEN g.id_macro_segment = '09' THEN '08_NCV'
+     WHEN g.id_macro_segment = '08' THEN '09_NAC'
+     WHEN g.id_macro_segment = '10' THEN '10_INA12'
+     WHEN g.id_macro_segment = '11' THEN '11_INA24'
+  ELSE '12_NOSEG' END AS SEGMENT_RFM ,
+  CASE WHEN f.LIB_SEGMENT_OMNI='OMNI' THEN '03-OMNI'
+       WHEN f.LIB_SEGMENT_OMNI='MAG' THEN '01-MAG'
+       WHEN f.LIB_SEGMENT_OMNI='WEB' THEN '02-WEB'
+       ELSE '09-NR/NC' END AS SEGMENT_OMNI   
 FROM tab2 a
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.tab_rem_Clt b ON a.CODE_CLIENT=b.CODE_CLIENT 
-LEFT JOIN info_clt c ON a.CODE_CLIENT=c.idclt ;
+LEFT JOIN info_clt c ON a.CODE_CLIENT=c.idclt 
+LEFT JOIN segrfm g ON a.CODE_CLIENT=g.CODE_CLIENT 
+LEFT JOIN segomni f ON a.CODE_CLIENT=f.CODE_CLIENT ;
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt ; 
 
 SELECT DISTINCT decile FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt ORDER BY 1; 
 
-CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Nm1 AS
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Dec AS
 SELECT '00-GLOBAL' AS TR_Decile,
 Count(DISTINCT CODE_CLIENT) AS Nbclt, 
 SUM(nb_ticket_Gbl) AS Nb_Ticket,
@@ -194,7 +224,114 @@ FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt
 GROUP BY 1 
 ORDER BY 1;
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Nm1 ORDER BY 1; 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Dec ORDER BY 1; 
+
+--- Rajouter les informations sur la segmentation 
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Seg AS
+WITH asd AS (SELECT DISTINCT TR_Decile, modalite, Nbclt  FROM (
+SELECT CASE WHEN decile<9 THEN CONCAT('DECILE 0',decile+1) ELSE 'DECILE 10' END AS TR_Decile, 
+'00-GLOBAL' as typo, '00-GLOBAL' AS modalite, 
+Count(DISTINCT CODE_CLIENT) AS Nbclt
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt
+GROUP BY 1, 2, 3 
+UNION 
+SELECT CASE WHEN decile<9 THEN CONCAT('DECILE 0',decile+1) ELSE 'DECILE 10' END AS TR_Decile, 
+'01_SEGMENT RFM' as typo, SEGMENT_RFM AS modalite, 
+Count(DISTINCT CODE_CLIENT) AS Nbclt
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt
+GROUP BY 1, 2, 3 
+UNION 
+SELECT '00-GLOBAL' AS TR_Decile, 
+'01_SEGMENT RFM' as typo, SEGMENT_RFM AS modalite, 
+Count(DISTINCT CODE_CLIENT) AS Nbclt
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt
+GROUP BY 1, 2, 3 
+UNION 
+SELECT '00-GLOBAL' AS TR_Decile, 
+'02_SEGMENT OMNI' as typo, SEGMENT_OMNI AS modalite,  
+Count(DISTINCT CODE_CLIENT) AS Nbclt
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt
+GROUP BY 1, 2, 3
+UNION 
+SELECT CASE WHEN decile<9 THEN CONCAT('DECILE 0',decile+1) ELSE 'DECILE 10' END AS TR_Decile, 
+'02_SEGMENT OMNI' as typo, SEGMENT_OMNI AS modalite,  
+Count(DISTINCT CODE_CLIENT) AS Nbclt
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_infoclt
+GROUP BY 1, 2, 3)
+ORDER BY 1,2,3)
+SELECT * FROM asd
+pivot (SUM(Nbclt) for modalite in ('00-GLOBAL','01_VIP','03_BC','04_MOY','05_TAP','06_TIEDE','07_TPURG','08_NCV','09_NAC','10_INA12','11_INA24','12_NOSEG','01-MAG','02-WEB','03-OMNI'));
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Seg ORDER BY 1; 
+
+/*** concatenation des informations pour les Déciles de 2 tables concernant les Déciles  */
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_DecGbl AS 
+SELECT a.*,
+"'00-GLOBAL'","'01_VIP'","'03_BC'","'04_MOY'","'05_TAP'","'06_TIEDE'","'07_TPURG'","'08_NCV'","'09_NAC'","'10_INA12'","'11_INA24'","'12_NOSEG'","'01-MAG'","'02-WEB'","'03-OMNI'"
+FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Dec a 
+LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_Seg b ON a.TR_DECILE=b.TR_DECILE 
+ORDER BY 1;  
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_DecGbl ORDER BY 1;  
+
+-- EXPORT ----
+      /* cr�er un dossier volant dossier_export_data_*/
+
+--CREATE OR REPLACE TEMPORARY STAGE dossier_export_data_;
+/* dedans, je vais mettre la requete entre FROM et FILE_FORMAT */
+--COPY INTO @dossier_export_data_/info_decile.csv FROM 
+--(SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_infoclt_DecGbl ORDER BY 1)      
+--FILE_FORMAT = ( 
+ --TYPE='CSV' 
+ --COMPRESSION=NONE /*GZIP */ /* compression ou non */
+ --FIELD_DELIMITER=',' /* dlm*/
+ --ESCAPE=NONE 
+-- ESCAPE_UNENCLOSED_FIELD=NONE 
+ --date_format='AUTO' 
+-- time_format='AUTO' 
+ --timestamp_format='AUTO'
+ --binary_format='UTF-8' 
+-- field_optionally_enclosed_by='"' 
+-- null_if='' 
+-- EMPTY_FIELD_AS_NULL = FALSE 
+--)  
+--overwrite=TRUE /* �crire par dessus */ 
+--single=TRUE /* fichier seul ou parralelisation*/ 
+--max_file_size=5368709120 /* taille max en Octet du fichier */
+--header=TRUE /* noms e col */;
+/* recuperer le nom du fichier / v�rifier que c ok */
+--ls @dossier_export_data_;
+--GET @dossier_export_data_/info_decile.csv  /* dans ton dossier volant */
+ --       file://C:\Users\msaka\OneDrive - HAPPYCHIC\Bureau\Extract_Result_Sql
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
