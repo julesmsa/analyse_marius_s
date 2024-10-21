@@ -99,13 +99,51 @@ ORDER BY 1 DESC;
 
 -- Test pour le calcul des indicateurs NO Stress 
 
+-- 30 Septembre au 06 octobre 2024 pour nouvelles mise à jour 
 
-    -- Test sur KPI's CLient Versus NoStress 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.TAB_TEST_NOSTRESS LIMIT 10;
+ 
+SELECT DISTINCT TRANSACTION_TYPE  FROM DATA_MESH_PROD_CLIENT.WORK.TAB_TEST_NOSTRESS
+
+
+
+SELECT * FROM DHB_PROD.DNR.DN_ENTITE ;
+
+SET dtdeb = Date('2024-09-30');
+SET dtfin = DAte('2024-10-06');
+
+SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
+SET ENSEIGNE2 = 3;
+SET PAYS1 = 'FRA'; --code_pays = 'FRA'
+SET PAYS2 = 'BEL'; --code_pays = 'BEL'
+
+
+WITH   Magasin AS (
+SELECT DISTINCT ID_ORG_ENSEIGNE, ID_MAGASIN, type_emplacement,code_magasin, lib_magasin, lib_statut, id_concept, lib_enseigne, code_pays, gpe_collectionning,
+date_ouverture_public, date_fermeture_public, code_postal, surface_commerciale,  
+CASE WHEN type_emplacement IN ('EC','MP') THEN 'WEB'
+WHEN type_emplacement IN ('PAC','CC', 'CV','CCV') THEN 'MAG' END AS PERIMETRE
+FROM DATA_MESH_PROD_RETAIL.HUB.DMD_MAGASIN
+WHERE ID_ORG_ENSEIGNE IN  ($ENSEIGNE1 , $ENSEIGNE2) AND code_pays IN ($PAYS1, $PAYS2) )
+SELECT TRANSACTION_TYPE,
+count(DISTINCT Store_id) AS nb_mag,
+Count(Distinct id) AS nbticket, 
+SUM(quantity) AS qte,
+Sum(price_eur) AS sum_price,
+Sum(valpr_eur) AS sum_valpr,
+Sum(marge_eur) AS sum_marge
+FROM DATA_MESH_PROD_CLIENT.WORK.TAB_TEST_NOSTRESS a 
+INNER JOIN Magasin h ON a.STORE_ID=h.ID_MAGASIN 
+GROUP BY 1
+; 
+
+
+ 
+-- Test sur KPI's CLient Versus NoStress 
+-- Test sur 1 mois dhistorique Ventes 
     
-    -- Test sur 1 mois dhistorique Ventes 
-    
-SET dtdeb = Date('2024-08-01');
-SET dtfin = DAte('2024-08-31');
+SET dtdeb = Date('2024-09-30');
+SET dtfin = DAte('2024-10-06');
 
 SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
 SET ENSEIGNE2 = 3;
@@ -147,13 +185,15 @@ CASE
         THEN 1  ELSE 0 END AS annul_ticket        
 from DHB_PROD.DNR.DN_VENTE vd
 where vd.date_ticket BETWEEN DATE($dtdeb) AND DATE($dtfin) 
-  and (vd.ID_ORG_ENSEIGNE = $ENSEIGNE1 or vd.ID_ORG_ENSEIGNE = $ENSEIGNE2)
-  and (vd.code_pays = $PAYS1 or vd.code_pays = $PAYS2) 
+  and vd.ID_ORG_ENSEIGNE IN ($ENSEIGNE1, $ENSEIGNE2)
+  and vd.code_pays IN ($PAYS1 , $PAYS2) 
   -- AND (VD.CODE_CLIENT IS NOT NULL AND VD.CODE_CLIENT !='0')
-  AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') 
+  --AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') 
 ;
-  
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml ; 
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml;
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml ; 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_TICKETS_Sml AS
 SELECT * FROM 
@@ -176,8 +216,7 @@ SELECT '02-NO STRESS' AS typo
 ,SUM(CASE WHEN annul_ticket=0 THEN remise_totale end) AS Remise_glb
 FROM  DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml
 GROUP BY 1)
-ORDER BY 1,2 ; 
-
+ORDER BY 1,2 ;
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_TICKETS_Sml ORDER BY 1,2 ;  
 

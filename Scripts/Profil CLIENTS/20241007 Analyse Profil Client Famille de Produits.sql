@@ -55,7 +55,7 @@ GROUP BY 1,2
 HAVING nb_ticket>0 AND CA_clt>0
 )
 SELECT DISTINCT Id_Client,  1 AS ref_top_achat
-FROM tab1 ; 
+FROM tab1; 
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.IDCLT_ETUDE ;
 
@@ -392,26 +392,27 @@ LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.BASE_INFOCLT_VALIUZ b ON a.CODE_CLIENT=b.ID
 
 -- Calcul des indicateurs de performances Clients 
 
+
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.KPICLT_BASE_TICKETS AS
 SELECT *
 FROM ( 
 SELECT '00_GLOBAL' AS typo_clt, '00_GLOBAL' AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -423,20 +424,20 @@ SELECT '01_GENRE' AS typo_clt, CASE
  ELSE '03-Autres/NC'  END AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -445,20 +446,20 @@ UNION
 SELECT '02_TYPE_CLIENT' AS typo_clt, TYPE_CLIENT AS modalite 
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -467,20 +468,20 @@ UNION
 SELECT '03_CAT_SEGMENT_RFM' AS typo_clt,  CAT_SEGMENT_RFM AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -489,20 +490,20 @@ UNION
 SELECT '04_SEGMENT_RFM' AS typo_clt,  SEGMENT_RFM AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -514,20 +515,20 @@ SELECT '05_OMNICANALITE' AS typo_clt,
       When lib_segment_omni ='OMNI' then '03-OMNI' ELSE '99-NON RENSEIGNE' end as modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen   
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -536,20 +537,20 @@ UNION
 SELECT '06_CANAL_ACHAT' AS typo_clt, PERIMETRE AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -558,20 +559,20 @@ UNION
 SELECT '07A_ANCIENNETE CLIENT' AS typo_clt,  Tr_anciennete AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen    
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -602,20 +603,20 @@ UNION
 SELECT '08A_AGE' AS typo_clt,  CLASSE_AGE AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -646,20 +647,20 @@ UNION
 SELECT '09_OPTIN_SMS' AS typo_clt,  CASE WHEN est_optin_sms_com=1 or est_optin_sms_fid=1 THEN '01_OUI' ELSE '02_NON' END AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -668,20 +669,20 @@ UNION
 SELECT '10_OPTIN_EMAIL' AS typo_clt,  CASE WHEN est_optin_email_com=1 or est_optin_email_fid=1 THEN '01_OUI' ELSE '02_NON' END AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen   
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -690,20 +691,20 @@ UNION
 SELECT '11_SQUARE_SID' AS typo_clt,  SQUARE_SID_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen   
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -712,20 +713,20 @@ UNION
 SELECT '12_STORE_ACTIVITY' AS typo_clt,  STORE_ACTIVITY_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen   
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -734,20 +735,20 @@ UNION
 SELECT '14_FAMILY_MATURITY_V2' AS typo_clt,  FAMILY_MATURITY_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -756,20 +757,20 @@ UNION
 SELECT '15_PRICE_V2' AS typo_clt,  PRICE_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -778,20 +779,20 @@ UNION
 SELECT '16_PROMO_V2' AS typo_clt,  PROMO_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -800,20 +801,20 @@ UNION
 SELECT '17_LIFESTYLE_SEGMENT_V2' AS typo_clt,  LIFESTYLE_SEGMENT_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -822,20 +823,20 @@ UNION
 SELECT '18_CROSSCANAL_12_V2' AS typo_clt,  CROSSCANAL_12_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen    
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -844,20 +845,20 @@ UNION
 SELECT '19_CSR_ENVIRONMENT_V2' AS typo_clt,  CSR_ENVIRONMENT_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen   
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -866,20 +867,20 @@ UNION
 SELECT '20_CSR_HEALTHY_V2' AS typo_clt,  CSR_HEALTHY_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -888,20 +889,20 @@ UNION
 SELECT '21_CSR_ORGANIC_V2' AS typo_clt,  CSR_ORGANIC_V2 AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen    
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -913,20 +914,20 @@ SELECT '22_ENSEIGNE' AS typo_clt,  CASE
  END  AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -936,20 +937,20 @@ SELECT '23_FAMILLE_PRODUITS' AS typo_clt,
  CASE WHEN LIB_FAMILLE_ACHAT IS NULL OR LIB_FAMILLE_ACHAT='Marketing' THEN 'Z-NC/NR' ELSE LIB_FAMILLE_ACHAT END AS modalite 
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -958,20 +959,20 @@ UNION
 SELECT '24_REGION' AS typo_clt,  REGION AS modalite 
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN CODE_CLIENT END) AS nb_clt_ref
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 THEN id_ticket END) AS nb_ticket_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_TTC END) AS CA_ref
-	,SUM(CASE WHEN ref_top_achat=1 THEN QUANTITE_LIGNE END) AS qte_achete_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
-    ,SUM(CASE WHEN ref_top_achat=1 THEN montant_remise END) AS Mnt_remise_ref 
-    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt_ref
-    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt_glb
-    ,COUNT(distinct id_ticket) AS nb_ticket_glb
-    ,SUM(MONTANT_TTC) AS CA_glb
-	,SUM(QUANTITE_LIGNE) AS qte_achete_glb
-    ,SUM(MONTANT_MARGE_SORTIE) AS Marge_glb
-    ,SUM(montant_remise) AS Mnt_remise_glb
-    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) then CODE_CLIENT end) AS nb_newclt
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 and Qte_pos>0 THEN CODE_CLIENT END) AS nb_clt_ref
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Qte_pos>0 THEN id_ticket END) AS nb_ticket_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_TTC END) AS CA_ref
+	,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN QUANTITE_LIGNE END) AS qte_achete_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN MONTANT_MARGE_SORTIE END) AS Marge_ref
+    ,SUM(CASE WHEN ref_top_achat=1 AND annul_ticket=0 THEN montant_remise END) AS Mnt_remise_ref 
+    ,COUNT(DISTINCT CASE WHEN ref_top_achat=1 AND Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt_ref
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
+    ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN id_ticket end) AS nb_ticket_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_TTC end) AS CA_glb
+	,SUM(CASE WHEN Qte_pos>0 THEN QUANTITE_LIGNE end) AS qte_achete_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN MONTANT_MARGE_SORTIE end) AS Marge_glb
+    ,SUM(CASE WHEN Qte_pos>0 THEN montant_remise end) AS Mnt_remise_glb
+    ,COUNT(DISTINCT CASE WHEN Date(date_recrutement)=Date(date_ticket) and Qte_pos>0 then CODE_CLIENT end) AS nb_newclt
     ,AVG(CASE WHEN ref_top_achat=1 AND AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen_ref   
     ,AVG(CASE WHEN AGE_C2 BETWEEN 15 AND 99 THEN AGE_C2 END) AS age_moyen  
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
@@ -1057,6 +1058,7 @@ PVM_CLT_GLB,
 TXMARGE_CLT_GLB,
 TXREMISE_CLT_GLB
 FROM trgfd ; 
+
 
 SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL ORDER BY 1,2; 
 

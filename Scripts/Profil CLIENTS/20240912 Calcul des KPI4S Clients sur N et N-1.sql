@@ -162,9 +162,7 @@ where vd.date_ticket BETWEEN DATE($dtdeb) AND DATE($dtfin)
   -- AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') 
 ;
   
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml ;  
-  
-
+ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.test_TICKETS_Sml ;
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_TICKETS_Sml AS
 SELECT * FROM 
