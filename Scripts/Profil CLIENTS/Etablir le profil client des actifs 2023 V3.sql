@@ -5489,11 +5489,9 @@ SELECT a.* ,
 		CASE WHEN modalite NOT IN ('Anciennete Moy Clt','Anciennete Moy Mag Clt','Anciennete Moy web Clt') AND FLAG_nb_eff>0 THEN round(nb_clt/FLAG_nb_eff, 4) END  AS poids_clt,
 		$dtdeb_EXONm1 AS dtdeb_EXONm1, $dtfin_EXONm1 AS dtfin_EXONm1
 FROM DATA_MESH_PROD_CLIENT.WORK.KPI_INFOCLT_TEST_SML_Nm1 a 
-ORDER BY 1,2,3,4; 
+ORDER BY 1,2,3,4;
 
-
-  --- Combinaison des deux années 
-
+  --- Combinaison des deux années
 
 CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.KPI_INFOCLT_TEST_JULES AS
 WITH tab0 AS (SELECT * FROM (
