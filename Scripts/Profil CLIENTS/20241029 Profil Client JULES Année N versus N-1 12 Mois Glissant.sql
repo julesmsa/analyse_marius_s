@@ -2,8 +2,8 @@
 
 -- Parametre des dates 
 
-SET dtfin = DAte('2024-10-01'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
-SET dtdeb = to_date(dateadd('year', -1, $dtfin)); 
+SET dtfin = DAte('2024-11-01'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
+SET dtdeb = DAte('2024-01-01'); -- to_date(dateadd('year', -1, $dtfin)); 
 
 SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
 SET ENSEIGNE2 = 3;
@@ -96,13 +96,13 @@ b.*,  ID_MACRO_SEGMENT , LIB_MACRO_SEGMENT, LIB_SEGMENT_OMNI
      WHEN id_macro_segment = '07' THEN '07_TPURG'
      WHEN id_macro_segment = '09' THEN '08_NCV'
      WHEN id_macro_segment = '08' THEN '09_NAC'
-     WHEN id_macro_segment = '10' THEN '10_INA12'
-     WHEN id_macro_segment = '11' THEN '11_INA24'
-  ELSE '12_NOSEG' END AS SEGMENT_RFM     
+     -- WHEN id_macro_segment = '10' THEN '10_INA12'
+     -- WHEN id_macro_segment = '11' THEN '11_INA24'
+  ELSE '12_NOSEG' END AS SEGMENT_RFM  -- On estime que tous les clients actifs ont effectué au moins un achat et sont donc segmentés    
 ,CASE WHEN id_macro_segment IN ('01', '02', '03') THEN '01_Haut_de_Fichier' 
      WHEN id_macro_segment IN ('04', '09') THEN '02_Ventre_Mou' 
      WHEN id_macro_segment IN ('05', '06', '07','08') THEN '03_Bas_de_Fichier' 
-     WHEN id_macro_segment IN ('10', '11') THEN '04_Inactifs' 
+     -- WHEN id_macro_segment IN ('10', '11') THEN '04_Inactifs' -- On estime que tous les clients actifs ont effectué au moins un achat et sont donc segmentés 
      ELSE '09_Non_Segmentes' END AS CAT_SEGMENT_RFM
 ,CASE WHEN (anciennete_client IS NULL) OR (anciennete_client BETWEEN 0 AND 12) THEN 'a: [0-12] mois' 
      WHEN anciennete_client IS NOT NULL AND anciennete_client BETWEEN 13 AND 24 THEN 'b: ]12-24] mois' 
@@ -116,8 +116,16 @@ CASE WHEN nb_lign=1 THEN AGE_C END AS AGE_C2
 FROM tickets a
 INNER JOIN info_clt b ON a.CODE_CLIENT=b.idclt
 LEFT JOIN segrfm c ON a.code_client=c.code_client
-LEFT JOIN segomni e ON a.code_client=e.code_client;
+LEFT JOIN segomni e ON a.code_client=e.code_client;  
+       
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.CLT_SELECT AS
+SELECT DISTINCT CODE_CLIENT 
+FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS
+WHERE Qte_pos>0 ;  -- ON selectionne les clients ayant au moins un tickets actifs sur la période d'Analyse
 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.CLT_SELECT ; 
+
+/*
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.BASE_INFOCLT_VALIUZ AS
 WITH DD_VLZ AS (SELECT DISTINCT 
 CODE_CLIENT, CROSSCANAL_12_24_MARKET,CROSSCANAL_12_MARKET,CROSSCANAL_24_36_MARKET,CROSSCANAL_24_MARKET,CROSSCANAL_36_MARKET,PRICE_SENSITIVITY_MARKET,PROMO_SENSITIVITY_MARKET, 
@@ -225,8 +233,10 @@ COALESCE(a.ZONE_ACTIVITY_STATUS, b.ZONE_ACTIVITY_STATUS, c.ZONE_ACTIVITY_STATUS)
 FROM DD_VLZ a 
 FULL JOIN DD_JULES b ON a.CODE_CLIENT=b.CODE_CLIENT
 FULL JOIN DD_MKT c ON a.CODE_CLIENT=c.CODE_CLIENT )
-SELECT *
+SELECT *,
+DATE($dtfin) AS DATE_CALCUL
 FROM Synth_vlz ; 
+*/
 
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.BASE_INFOCLT_VALIUZ LIMIT 10; 
 
@@ -287,6 +297,7 @@ else CSR_HEALTHY end as CSR_HEALTHY_V2,
 case when CSR_ORGANIC is null or CSR_ORGANIC IN ('',' ','-1','V') then '99-NON RENSEIGNE'
 else CSR_ORGANIC end as CSR_ORGANIC_V2
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS a 
+INNER JOIN DATA_MESH_PROD_CLIENT.WORK.CLT_SELECT clt ON a.CODE_CLIENT=clt.CODE_CLIENT  
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.BASE_INFOCLT_VALIUZ b ON a.CODE_CLIENT=b.ID_CLIENT ;
 
 -- Calcul des indicateurs de performances Clients 
@@ -426,7 +437,7 @@ SELECT '07B_ANCIENNETE Moyenne' AS typo_clt,  'ANCIENNETE Moyenne' AS modalite
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2
     GROUP BY 1,2
 UNION
-SELECT '08A_AGE' AS typo_clt,  CLASSE_AGE AS modalite
+SELECT '08A_AGE' AS typo_clt,  CASE WHEN CLASSE_AGE IN ('80-84','85-89','90-94','95-99') THEN '80 et +' ELSE CLASSE_AGE END AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
     ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
@@ -720,9 +731,11 @@ SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL ORDER BY 1,2;
 
 ---- Analyse Sur la Période N-1 
 
-SET dtdeb_Nm1 = to_date(dateadd('year', -1, $dtfin));
-SET dtfin_Nm1 = to_date(dateadd('year', -2, $dtfin)); 
+SET dtdeb_Nm1 = to_date(dateadd('year', -1, $dtdeb));
+SET dtfin_Nm1 = to_date(dateadd('year', -1, $dtfin)); 
 
+
+SELECT $dtdeb_Nm1 , $dtfin_Nm1 ; 
 
 
 /*** Creation de la table permettant d'identifier les clients pour le profil ***/   
@@ -811,13 +824,13 @@ b.*,  ID_MACRO_SEGMENT , LIB_MACRO_SEGMENT, LIB_SEGMENT_OMNI
      WHEN id_macro_segment = '07' THEN '07_TPURG'
      WHEN id_macro_segment = '09' THEN '08_NCV'
      WHEN id_macro_segment = '08' THEN '09_NAC'
-     WHEN id_macro_segment = '10' THEN '10_INA12'
-     WHEN id_macro_segment = '11' THEN '11_INA24'
+     -- WHEN id_macro_segment = '10' THEN '10_INA12'
+     -- WHEN id_macro_segment = '11' THEN '11_INA24'
   ELSE '12_NOSEG' END AS SEGMENT_RFM     
 ,CASE WHEN id_macro_segment IN ('01', '02', '03') THEN '01_Haut_de_Fichier' 
      WHEN id_macro_segment IN ('04', '09') THEN '02_Ventre_Mou' 
      WHEN id_macro_segment IN ('05', '06', '07','08') THEN '03_Bas_de_Fichier' 
-     WHEN id_macro_segment IN ('10', '11') THEN '04_Inactifs' 
+     -- WHEN id_macro_segment IN ('10', '11') THEN '04_Inactifs' 
      ELSE '09_Non_Segmentes' END AS CAT_SEGMENT_RFM
 ,CASE WHEN (anciennete_client IS NULL) OR (anciennete_client BETWEEN 0 AND 12) THEN 'a: [0-12] mois' 
      WHEN anciennete_client IS NOT NULL AND anciennete_client BETWEEN 13 AND 24 THEN 'b: ]12-24] mois' 
@@ -832,6 +845,15 @@ FROM tickets a
 INNER JOIN info_clt b ON a.CODE_CLIENT=b.idclt
 LEFT JOIN segrfm c ON a.code_client=c.code_client
 LEFT JOIN segomni e ON a.code_client=e.code_client;
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_Nm1 ; 
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.CLT_SELECT_Nm1 AS
+SELECT DISTINCT CODE_CLIENT 
+FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_Nm1
+WHERE Qte_pos>0 ;  -- ON selectionne les clients ayant au moins un tickets actifs sur la période d'Analyse
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.CLT_SELECT_Nm1 ; 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2_Nm1 AS
 SELECT a.*, AGE_VLZ, GENDER_VLZ,
@@ -889,7 +911,13 @@ else CSR_HEALTHY end as CSR_HEALTHY_V2,
 case when CSR_ORGANIC is null or CSR_ORGANIC IN ('',' ','-1','V') then '99-NON RENSEIGNE'
 else CSR_ORGANIC end as CSR_ORGANIC_V2
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_Nm1 a 
+INNER JOIN DATA_MESH_PROD_CLIENT.WORK.CLT_SELECT_Nm1 clt ON a.CODE_CLIENT=clt.CODE_CLIENT  
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.BASE_INFOCLT_VALIUZ b ON a.CODE_CLIENT=b.ID_CLIENT ;
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2_Nm1 ; 
+
+
+
 
 -- Calcul des indicateurs de performances Clients 
 
@@ -1028,7 +1056,7 @@ SELECT '07B_ANCIENNETE Moyenne' AS typo_clt,  'ANCIENNETE Moyenne' AS modalite
 FROM DATA_MESH_PROD_CLIENT.WORK.BASE_TICKETS_V2_Nm1
     GROUP BY 1,2
 UNION
-SELECT '08A_AGE' AS typo_clt,  CLASSE_AGE AS modalite
+SELECT '08A_AGE' AS typo_clt, CASE WHEN CLASSE_AGE IN ('80-84','85-89','90-94','95-99') THEN '80 et +' ELSE CLASSE_AGE END AS modalite
     ,MIN(DATE(date_ticket)) AS Min_date_ticket
     ,MAX(DATE(date_ticket)) AS Max_date_ticket
     ,COUNT( DISTINCT CASE WHEN Qte_pos>0 THEN CODE_CLIENT end) AS nb_clt_glb
@@ -1321,7 +1349,7 @@ FROM trgfd ;
 SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL_Nm1 ORDER BY 1,2;
 
 
---- Regroupement des informations 
+--- Regroupement des informations et vcalcul des ecart et autres 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL_GLOBAL AS 
 SELECT a.*,
@@ -1344,11 +1372,35 @@ IDV_CLT_GLB_Nm1,
 PVM_CLT_GLB_Nm1,
 TXMARGE_CLT_GLB_Nm1,
 TXREMISE_CLT_GLB_Nm1,
+CASE WHEN NB_CLT_GLB_Nm1 IS NOT NULL AND NB_CLT_GLB_Nm1>0 THEN ROUND((NB_CLT_GLB - NB_CLT_GLB_Nm1)/NB_CLT_GLB_Nm1,4) END AS EVOL_NB_CLT,
+CASE WHEN NB_TICKET_GLB_Nm1 IS NOT NULL AND NB_TICKET_GLB_Nm1>0 THEN ROUND((NB_TICKET_GLB - NB_TICKET_GLB_Nm1)/NB_TICKET_GLB_Nm1,4) END AS EVOL_NB_TICKET,
+CASE WHEN CA_GLB_Nm1 IS NOT NULL AND CA_GLB_Nm1>0 THEN ROUND((CA_GLB - CA_GLB_Nm1)/CA_GLB_Nm1,4) END AS EVOL_CA,
+CASE WHEN QTE_ACHETE_GLB_Nm1 IS NOT NULL OR QTE_ACHETE_GLB_Nm1>0 THEN ROUND((QTE_ACHETE_GLB - QTE_ACHETE_GLB_Nm1)/QTE_ACHETE_GLB_Nm1,4) END AS EVOL_QTE_ACHETE,
+CASE WHEN MARGE_GLB_Nm1 IS NOT NULL AND MARGE_GLB_Nm1>0 THEN ROUND((MARGE_GLB - MARGE_GLB_Nm1)/MARGE_GLB_Nm1,4) END AS EVOL_MARGE,
+CASE WHEN MNT_REMISE_GLB_Nm1 IS NOT NULL AND MNT_REMISE_GLB_Nm1>0 THEN ROUND((MNT_REMISE_GLB - MNT_REMISE_GLB_Nm1)/MNT_REMISE_GLB_Nm1,4) END AS EVOL_MNT_REMISE,
+CASE WHEN NB_NEWCLT_Nm1 IS NOT NULL AND NB_NEWCLT_Nm1>0 THEN ROUND((NB_NEWCLT - NB_NEWCLT_Nm1)/NB_NEWCLT_Nm1,4) END AS EVOL_NB_NEWCLT,
+ROUND((AGE_MOYEN - AGE_MOYEN_Nm1),1) AS Ecart_AGE_MOYEN, 
+ROUND((POIDS_CLT_GLB - POIDS_CLT_GLB_Nm1),4)*100 AS Ecart_POIDS_CLT_GLB,
+ROUND((CA_PAR_CLT_GLB - CA_PAR_CLT_GLB_Nm1),1) AS Ecart_CA_PAR_CLT,
+ROUND((FREQ_CLT_GLB - FREQ_CLT_GLB_Nm1),1) AS Ecart_FREQ_CLT,
+ROUND((PANIER_CLT_GLB - PANIER_CLT_GLB_Nm1),1) AS Ecart_PANIER_CLT,
+ROUND((IDV_CLT_GLB - IDV_CLT_GLB_Nm1),1) AS Ecart_IDV_CLT,
+ROUND((PVM_CLT_GLB - PVM_CLT_GLB_Nm1),1) AS Ecart_PVM_CLT,
+ROUND((TXMARGE_CLT_GLB - TXMARGE_CLT_GLB_Nm1),4)*100 AS Ecart_TXMARGE_CLT,
+ROUND((TXREMISE_CLT_GLB - TXREMISE_CLT_GLB_Nm1),4)*100 AS Ecart_TXREMISE_CLT,
 DATE($dtfin) AS DATE_CALCUL
 FROM DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL a
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL_Nm1 b ON a.TYPO_CLT=b.TYPO_CLT AND a.MODALITE=b.MODALITE ; 
 
-SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL_Nm1 ORDER BY 1,2;
+SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.KPICLT_PROFIL_GLOBAL ORDER BY 1,2;
+
+-- EXTRACTION DES DONNEES
+
+SELECT * FROM DHB_PROD.DNR.DN_VENTE WHERE id_ticket IN ('1-57-1-20240425-14116029' ,'' ) ;
+
+SELECT * FROM DHB_PROD.DNR.DN_VENTE WHERE id_ticket IN ('1-57-1-20240425-14116029' ,'' ) ;
+
+
 
 
 

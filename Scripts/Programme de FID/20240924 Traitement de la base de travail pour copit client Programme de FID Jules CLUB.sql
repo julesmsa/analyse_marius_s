@@ -7,18 +7,9 @@ SET dtdeb_jclub = to_date(dateadd('year', -1, $dtfin_jclub));
 SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
 SET ENSEIGNE2 = 3;
 SET PAYS1 = 'FRA'; --code_pays = 'FRA' ... 
-SET PAYS2 = 'BEL'; --code_pays = 'BEL' 
-
+SET PAYS2 = 'BEL'; --code_pays = 'BEL'
 
 SELECT $dtdeb_jclub, $dtfin_jclub, $ENSEIGNE1, $ENSEIGNE2, $PAYS1, $PAYS2;
-
---SELECT * FROM DHB_PROD.HUB.D_CLI_HISTO_CLIENT WHERE code_Client='336190003473' ORDER BY DATE_DEBUT ;
-
--- '312710015857' ORDER BY DATE_DEBUT 
-
--- SELECT * FROM DHB_PROD.DNR.DN_VENTE vd
-
--- SELECT * FROM DHB_PROD.DNR.DN_ENTITE  where id_entite=3
 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.infotick_jclub AS 
@@ -88,10 +79,12 @@ info_clt AS (
     END AS CLASSE_AGE        
     FROM DHB_PROD.DNR.DN_CLIENT
     WHERE code_client IS NOT NULL AND code_client !='0'),
-t_club AS (SELECT distinct code_client , valeur
+t_club AS (
+SELECT distinct code_client , valeur
 FROM DHB_PROD.HUB.D_CLI_INDICATEUR
 where id_indic = 191 AND code_client IS NOT NULL AND code_client !='0'
-and (ID_ORG_ENSEIGNE = $ENSEIGNE1 or ID_ORG_ENSEIGNE = $ENSEIGNE2))
+and (ID_ORG_ENSEIGNE = $ENSEIGNE1 or ID_ORG_ENSEIGNE = $ENSEIGNE2)
+)
 SELECT a.*, b.* , 
 c.ID_MACRO_SEGMENT , c.LIB_MACRO_SEGMENT,
 e.LIB_SEGMENT_OMNI , f.valeur, nb_pts_fidelite_a_date,
@@ -1848,7 +1841,13 @@ ORDER BY 1,2,3,4,5,6,7 ;
 
 */
 
--- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_FINAL ORDER BY 1,2,3,4,5,6,7 ; 
+ 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_FINAL 
+WHERE DATE_CALCUL ='2024-10-01'ORDER BY 1,2,3,4,5,6,7 ; 
+MODALITE = '00-Global' AND LIB_STATUT_CLIENT = '00-Global' AND TYPE_MAG = '00-GLOBAL'
+AND 
+
+
 
 
 

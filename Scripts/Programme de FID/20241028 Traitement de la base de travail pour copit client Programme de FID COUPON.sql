@@ -14,7 +14,10 @@ Nombre moyen de chèques / client
 Délai moyen d'utilisation du chèque après émission
 Valeur moyenne du chèque 
 CA / % dans le CA total
-Taux de remise / Taux de marge sortie
+Taux de remise 
+Remise moyenne par clients / remise moyenne par tickets 
+delai moyen d'utilisation des tickets 
+/ Taux de marge sortie
 IV / PM
 Fréquence
 Typologie de clients 
@@ -24,17 +27,38 @@ Comparer ces mêmes chiffres à tous les autres tickets sur la période
 
 ****/ 
 
-SET dtdeb='2024-04-24';
-SET dtfin='2024-05-31';
+SET dtdeb='2023-04-24';
+SET dtfin='2023-10-31';
 SET dtdeb_Nm1 = to_date(dateadd('year', -1, $dtdeb)); 
+SET dtfin_Nm1 = to_date(dateadd('year', -1, $dtfin)); 
 SET ENSEIGNE1 = 1; -- renseigner ici les différentes enseignes et pays. Renseigner tous les paramètres, quitte à utiliser une valeur qui n'existe pas
 SET ENSEIGNE2 = 3;
 SET PAYS1 = 'FRA'; --code_pays = 'FRA' ... 
 SET PAYS2 = 'BEL'; --code_pays = 'BEL' 
 
-SELECT $dtdeb, $dtfin, $dtdeb_Nm1, $PAYS1, $PAYS2, $ENSEIGNE1, $ENSEIGNE2;
+SELECT $dtdeb, $dtfin, $dtdeb_Nm1, $dtfin_Nm1,  $PAYS1, $PAYS2, $ENSEIGNE1, $ENSEIGNE2;
 
 --- Information sur l'année N
+-- Dans la table DN coupons
+/*
+WITH tab0 AS (SELECT DISTINCT  CODE_CLIENT, CODE_COUPON, CODE_AM, CODE_MAGASIN, DATE_DEBUT_VALIDITE, DATE_FIN_VALIDITE, 
+ID_MAGASIN_UTILISATION, LIB_MAGASIN_UTILISATION, DATE_TICKET, ID_TICKET, TYPE_MAGASIN, MONTANT_REMISE, MONTANT_REMISE_COUPON, 
+MONTANT_TTC , MONTANT_SOLDE , MONTANT_MARGE_ENTREE 
+FROM DHB_PROD.DNR.DN_COUPON
+WHERE code_am IN ('108250','101623','301906','130146','126861','326910','130147','130148') AND  DATE(date_debut_validite) BETWEEN DATE($dtdeb) AND DATE($dtfin) )
+SELECT CODE_AM, 
+Min(DATE(date_debut_validite)) AS date_deb_op,
+Max(DATE(date_fin_validite)) AS date_fin_op,
+Count(DISTINCT CODE_COUPON) AS nbcoupon, 
+Count(DISTINCT CODE_CLIENT) AS nbclt ,
+Count(DISTINCT ID_TICKET) AS nbticket ,
+SUM(MONTANT_REMISE_COUPON) AS remise_coupon
+FROM tab0 
+GROUP BY 1
+ORDER BY 1 ;
+
+*/
+
 
         
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.tab_creat_coupon_N AS 
@@ -240,6 +264,7 @@ CONCAT( CODE_CLIENT, id_ticket_ligt2, CAST (NUMERO_OPERATION AS VARCHAR(10)) ) N
 -- information de chaque ticket de caisse 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_statticket_N AS
 SELECT CODE_CLIENT,id_ticket, Qte_pos,PERIMETRE,
+MAX(CASE WHEN annul_ticket=0 THEN date_ticket END) AS date_ticket,
 SUM(CASE WHEN annul_ticket=0 THEN MONTANT_TTC END) AS Mtn_Gbl,
 SUM(CASE WHEN annul_ticket=0 THEN QUANTITE_LIGNE END ) AS Qte_Gbl,
 SUM(CASE WHEN annul_ticket=0 THEN MONTANT_MARGE_SORTIE END ) AS Marge_Gbl,
@@ -253,7 +278,7 @@ ORDER BY 1,2,3,4;
 -- recuperer toutes les informations ticket pour chaque code coupon 
 
  CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_stat_V AS
-SELECT a.*,  b.id_ticket AS id_ticket_lign, Qte_pos,PERIMETRE, b.Mtn_Gbl, b.Qte_Gbl, b.Marge_Gbl, b.Rem_Gbl
+SELECT a.*,  b.id_ticket AS id_ticket_lign, b.date_ticket, Qte_pos,PERIMETRE, b.Mtn_Gbl, b.Qte_Gbl, b.Marge_Gbl, b.Rem_Gbl
 FROM tab_list_coupon_N_V2 a
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.tab_statticket_N b ON a.CODE_CLIENT=b.CODE_CLIENT AND a.id_ticket=b.id_ticket ; 
 
@@ -283,7 +308,9 @@ LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.tab_cvf b ON a.Code_client=b.Code_client AN
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_globale_coupon AS
 SELECT a.*, 
- b.CODe_Client AS idclt_tk, b.id_ticket, b.code_coupon_used, b.mtremise_coupon, b.CODEACTIONMARKETING_COUPON, Qte_pos,PERIMETRE, b.Mtn_Gbl, b.Qte_Gbl, b.Marge_Gbl, b.Rem_Gbl
+ b.CODe_Client AS idclt_tk, b.id_ticket, b.date_ticket, b.code_coupon_used, b.mtremise_coupon, b.CODEACTIONMARKETING_COUPON, 
+ Qte_pos,PERIMETRE, b.Mtn_Gbl, b.Qte_Gbl, b.Marge_Gbl, b.Rem_Gbl,
+ CASE WHEN date_ticket IS NOT NULL THEN  DATEDIFF(DAY, date_debut_validite, date_ticket) ELSE NULL END AS Delai_used
  FROM DATA_MESH_PROD_RETAIL.WORK.tab_creat_coupon_N a
  LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.tab_stat_V2  b ON a.CODE_COUPON=b.code_coupon_used AND a.code_AM=b.CODEACTIONMARKETING_COUPON;
 
@@ -305,6 +332,7 @@ SELECT lIB_CODE_AM, CODE_AM,
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND DATE(date_fin_validite) BETWEEN DATE($dtdeb) AND DATE($dtfin) THEN code_coupon_used END) AS nb_cp_used_fin_val
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'MAG' THEN code_coupon_used END) AS nb_coupon_used_Mag
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'WEB' THEN code_coupon_used END) AS nb_coupon_used_Web
+,ROUND (AVG (delai_used),1) AS Delai_used_moy
 ,Count(DISTINCT code_client) AS nb_clt_coupon
 ,ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy
 ,ROUND (AVG (anciennete_client),1) AS anciennete_moy
@@ -338,6 +366,7 @@ SELECT lIB_CODE_AM, CODE_AM,
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND DATE(date_fin_validite) BETWEEN DATE($dtdeb) AND DATE($dtfin) THEN code_coupon_used END) AS nb_cp_used_fin_val
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'MAG' THEN code_coupon_used END) AS nb_coupon_used_Mag
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'WEB' THEN code_coupon_used END) AS nb_coupon_used_Web
+,ROUND (AVG (delai_used),1) AS Delai_used_moy
 ,Count(DISTINCT code_client) AS nb_clt_coupon
 ,ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy
 ,ROUND (AVG (anciennete_client),1) AS anciennete_moy
@@ -371,6 +400,7 @@ SELECT lIB_CODE_AM, CODE_AM,
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND DATE(date_fin_validite) BETWEEN DATE($dtdeb) AND DATE($dtfin) THEN code_coupon_used END) AS nb_cp_used_fin_val
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'MAG' THEN code_coupon_used END) AS nb_coupon_used_Mag
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'WEB' THEN code_coupon_used END) AS nb_coupon_used_Web
+,ROUND (AVG (delai_used),1) AS Delai_used_moy
 ,Count(DISTINCT code_client) AS nb_clt_coupon
 ,ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy
 ,ROUND (AVG (anciennete_client),1) AS anciennete_moy
@@ -404,6 +434,7 @@ SELECT lIB_CODE_AM, CODE_AM,
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND DATE(date_fin_validite) BETWEEN DATE($dtdeb) AND DATE($dtfin) THEN code_coupon_used END) AS nb_cp_used_fin_val
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'MAG' THEN code_coupon_used END) AS nb_coupon_used_Mag
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'WEB' THEN code_coupon_used END) AS nb_coupon_used_Web
+,ROUND (AVG (delai_used),1) AS Delai_used_moy
 ,Count(DISTINCT code_client) AS nb_clt_coupon
 ,ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy
 ,ROUND (AVG (anciennete_client),1) AS anciennete_moy
@@ -437,6 +468,7 @@ SELECT lIB_CODE_AM, CODE_AM,
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND DATE(date_fin_validite) BETWEEN DATE($dtdeb) AND DATE($dtfin) THEN code_coupon_used END) AS nb_cp_used_fin_val
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'MAG' THEN code_coupon_used END) AS nb_coupon_used_Mag
 ,Count(DISTINCT CASE WHEN code_coupon_used IS NOT NULL AND PERIMETRE = 'WEB' THEN code_coupon_used END) AS nb_coupon_used_Web
+,ROUND (AVG (delai_used),1) AS Delai_used_moy
 ,Count(DISTINCT code_client) AS nb_clt_coupon
 ,ROUND (AVG (CASE WHEN AGE_C BETWEEN 15 AND 99 THEN AGE_C END),1) AS age_moy
 ,ROUND (AVG (anciennete_client),1) AS anciennete_moy
@@ -460,7 +492,7 @@ GROUP BY 1,2,3,4);
 
 -- Calcul des Statistiques global 
 
-CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.stat_globale_JUIN24 AS
+CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE23 AS
 SELECT a.* 
 ,CASE WHEN nb_coupon_emis IS NOT NULL AND nb_coupon_emis>0 THEN Round(nb_coupon_used/nb_coupon_emis,4) END AS Tx_Coupon_Used
 ,CASE WHEN nb_cp_emis_fin_val IS NOT NULL AND nb_cp_emis_fin_val>0 THEN Round(nb_cp_used_fin_val/nb_cp_emis_fin_val,4) END AS Tx_Cp_Used_fin_val
@@ -472,60 +504,124 @@ SELECT a.*
 ,CASE WHEN CA_Global IS NOT NULL AND CA_Global>0 THEN Round(marge_totale/CA_Global,4) END AS txmarge_totale_glb   
 ,CASE WHEN CA_Global IS NOT NULL AND CA_Global>0 THEN Round(remise_totale/(CA_Global + remise_totale),4) END AS txremise_glb
 ,CASE WHEN CA_Global IS NOT NULL AND CA_Global>0 THEN Round(remise_coupon/(CA_Global + remise_coupon),4) END AS txremise_coupon
-,DATE($dtfin)+1 AS DATE_CALCUL
+,CASE WHEN nb_clt_used IS NOT NULL AND nb_clt_used>0 THEN Round(remise_coupon/nb_clt_used,4) END AS rem_moyen_coupon
+,DATE($dtfin) AS DATE_CALCUL
 FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_coupon_N a
 ORDER BY 1,2,3,4 ; 
 
-
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_JUIN24 ;
-
-
-/**
- * SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_SEPTEMBRE24 ;
- * 
- * SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_OCTOBRE24 ;
- * SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_AOUT24
- * SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_JUILLET24
- * SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_JUIN24 ;
- */
-
---- REGROUPEMENT DE SINFORMATIONS DANS UNE TABLE EXPLOITABLE 
-
-
 /*
- 
- 
-CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.stat_globale_fid_GBLDFT AS 
-SELECT * FROM (  
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_SEPTEMBRE24 
- UNION
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_OCTOBRE24 
- UNION
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_AOUT24
- UNION
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_JUILLET24
- UNION
- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_JUIN24 
-) 
-ORDER BY 1,2,3,4 ; 
-
-
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_fid_GBLDFT ORDER BY DATE_CALCUL,1,2,3,4 ;  
-
-CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.STAT_GLOBAL_COUPONFID_FINAL AS 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_fid_GBLDFT ORDER BY DATE_CALCUL,1,2,3,4; 
-
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE24 ORDER BY 1,2,3,4 ; 
+WHERE MODALITE = '00-Global'
+ORDER BY 1,2,3,4;
 */
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.STAT_GLOBAL_COUPONFID_FINAL  ORDER BY DATE_CALCUL,1,2,3,4 ;
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE23 ORDER BY 1,2,3,4 LIMIT 10; 
 
-/*
- CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_globale_coupon_V2 AS
- SELECT a.*,b.*
- FROM DATA_MESH_PROD_CLIENT.WORK.tab_globale_coupon a
- LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.tab_coupon_detail b ON a.id_ticket=b.id_ticket_ligt2 AND a.code_AM=b.NUMERO_OPERATION ; 
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_globale_coupon_V2 WHERE NUMERO_OPERATION=130148; 
-*/
+CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.statCoupon_FIN_OCTOBRE24 AS
+WITH tab23  AS ( SELECT 
+LIB_CODE_AM,
+CODE_AM ,
+TYPO ,
+MODALITE,
+DATE_DEB_OP as DATE_DEB_OP_Nm1,
+DATE_FIN_OP as DATE_FIN_OP_Nm1,
+NB_COUPON_EMIS as NB_COUPON_EMIS_Nm1,
+NB_CP_EMIS_FIN_VAL as NB_CP_EMIS_FIN_VAL_Nm1,
+NB_COUPON_MAG as NB_COUPON_MAG_Nm1,
+NB_COUPON_WEB as NB_COUPON_WEB_Nm1,
+NB_COUPON_USED as NB_COUPON_USED_Nm1,
+NB_CP_USED_FIN_VAL as NB_CP_USED_FIN_VAL_Nm1,
+NB_COUPON_USED_MAG as NB_COUPON_USED_MAG_Nm1,
+NB_COUPON_USED_WEB as NB_COUPON_USED_WEB_Nm1,
+DELAI_USED_MOY as DELAI_USED_MOY_Nm1,
+NB_CLT_COUPON as NB_CLT_COUPON_Nm1,
+AGE_MOY as AGE_MOY_Nm1,
+ANCIENNETE_MOY as ANCIENNETE_MOY_Nm1,
+NB_CLT_USED as NB_CLT_USED_Nm1,
+NB_CLT_USED_MAG as NB_CLT_USED_MAG_Nm1,
+NB_CLT_USED_WEB as NB_CLT_USED_WEB_Nm1,
+NB_TICKET_USED as NB_TICKET_USED_Nm1,
+NB_TICKET_USED_MAG as NB_TICKET_USED_MAG_Nm1,
+NB_TICKET_USED_WEB as NB_TICKET_USED_WEB_Nm1,
+REMISE_COUPON as REMISE_COUPON_Nm1,
+REMISE_TOTALE as REMISE_TOTALE_Nm1,
+CA_GLOBAL as CA_GLOBAL_Nm1,
+QTE_TOTALE as QTE_TOTALE_Nm1,
+MARGE_TOTALE as MARGE_TOTALE_Nm1,
+NB_NEWCLT_COUPON as NB_NEWCLT_COUPON_Nm1,
+NB_NEWCLT_USED as NB_NEWCLT_USED_Nm1,
+NB_NEWCLT_USED_MAG as NB_NEWCLT_USED_MAG_Nm1,
+NB_NEWCLT_USED_WEB as NB_NEWCLT_USED_WEB_Nm1,
+TX_COUPON_USED as TX_COUPON_USED_Nm1,
+TX_CP_USED_FIN_VAL as TX_CP_USED_FIN_VAL_Nm1,
+CA_PAR_CLT_GLB as CA_PAR_CLT_GLB_Nm1,
+FREQ_CLT_GLB as FREQ_CLT_GLB_Nm1,
+PANIER_CLT_GLB as PANIER_CLT_GLB_Nm1,
+IDV_CLT_GLB as IDV_CLT_GLB_Nm1,
+PVM_CLT_GLB as PVM_CLT_GLB_Nm1,
+TXMARGE_TOTALE_GLB as TXMARGE_TOTALE_GLB_Nm1,
+TXREMISE_GLB as TXREMISE_GLB_Nm1,
+TXREMISE_COUPON as TXREMISE_COUPON_Nm1,
+REM_MOYEN_COUPON as REM_MOYEN_COUPON_Nm1,
+DATE_CALCUL as DATE_CALCUL_Nm1 
+FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE23 )
+SELECT a.*, 
+DATE_DEB_OP_Nm1,
+DATE_FIN_OP_Nm1,
+NB_COUPON_EMIS_Nm1,
+NB_CP_EMIS_FIN_VAL_Nm1,
+NB_COUPON_MAG_Nm1,
+NB_COUPON_WEB_Nm1,
+NB_COUPON_USED_Nm1,
+NB_CP_USED_FIN_VAL_Nm1,
+NB_COUPON_USED_MAG_Nm1,
+NB_COUPON_USED_WEB_Nm1,
+DELAI_USED_MOY_Nm1,
+NB_CLT_COUPON_Nm1,
+AGE_MOY_Nm1,
+ANCIENNETE_MOY_Nm1,
+NB_CLT_USED_Nm1,
+NB_CLT_USED_MAG_Nm1,
+NB_CLT_USED_WEB_Nm1,
+NB_TICKET_USED_Nm1,
+NB_TICKET_USED_MAG_Nm1,
+NB_TICKET_USED_WEB_Nm1,
+REMISE_COUPON_Nm1,
+REMISE_TOTALE_Nm1,
+CA_GLOBAL_Nm1,
+QTE_TOTALE_Nm1,
+MARGE_TOTALE_Nm1,
+NB_NEWCLT_COUPON_Nm1,
+NB_NEWCLT_USED_Nm1,
+NB_NEWCLT_USED_MAG_Nm1,
+NB_NEWCLT_USED_WEB_Nm1,
+TX_COUPON_USED_Nm1,
+TX_CP_USED_FIN_VAL_Nm1,
+CA_PAR_CLT_GLB_Nm1,
+FREQ_CLT_GLB_Nm1,
+PANIER_CLT_GLB_Nm1,
+IDV_CLT_GLB_Nm1,
+PVM_CLT_GLB_Nm1,
+TXMARGE_TOTALE_GLB_Nm1,
+TXREMISE_GLB_Nm1,
+TXREMISE_COUPON_Nm1,
+REM_MOYEN_COUPON_Nm1,
+DATE_CALCUL_Nm1
+FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE24 a
+LEFT JOIN tab23 b ON a.LIB_CODE_AM=b.LIB_CODE_AM AND a.CODE_AM=b.CODE_AM  AND a.TYPO=b.TYPO  AND a.MODALITE=b.MODALITE;
+
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.statCoupon_FIN_OCTOBRE24 ORDER BY 1,2,3,4; 
+
+
+
+
+
+
+
+
+/**** Calcul Sur N-1 des informations ***/ 
+
 
 
