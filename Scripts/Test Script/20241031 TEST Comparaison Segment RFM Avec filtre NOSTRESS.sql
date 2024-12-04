@@ -1,7 +1,5 @@
 -- Comparaison Segment RFM
 
-
-
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.TEST_SEGMENT_RFM AS
 WITH Tab0 AS (SELECT DISTINCT CODE_CLIENT AS ID_CLIENT, ID_MACRO_SEGMENT AS ID_MACRO_SEGMENT_NOSTRESS, LIB_MACRO_SEGMENT AS LIB_MACRO_SEGMENT_NOSTRESS,
 CASE WHEN id_macro_segment = '01' THEN '01_VIP' 
@@ -93,8 +91,6 @@ WHERE CODE_Client='006210037155' ORDER BY DATE_TICKET ;
 
 -- Test avec quelques magasins 
 
-
-
 WITH tab0 AS (SELECT DISTINCT CODE_CLIENT,
 vd.ID_ORG_ENSEIGNE AS idorgens_achat, vd.ID_MAGASIN AS idmag_achat, vd.CODE_MAGASIN AS mag_achat, vd.CODE_CAISSE, vd.CODE_DATE_TICKET, vd.CODE_TICKET, vd.date_ticket, 
 vd.CODE_SKU, vd.Code_RCT,lib_famille_achat, vd.lib_magasin, CONCAT( vd.CODE_MAGASIN,'_',lib_magasin) AS nom_mag,
@@ -179,3 +175,43 @@ AND vd.ID_MAGASIN = 82
   FROM tab0
   
   
+  
+  -- Info club 
+  
+SELECT * FROM DHB_PROD.HUB.D_CLI_HISTO_CLIENT 
+WHERE 
+
+SELECT * FROM  DHB_PROD.HUB.d_cli_histo_indicateur;
+
+
+DATE_DEBUT <= DATE($dtfin_jclub)
+AND (DATE_FIN > DATE($dtfin_jclub) OR DATE_FIN IS NULL) AND code_client IS NOT NULL AND code_client !='0'
+  
+SELECT DISTINCT CODE_CLIENT, nombre_points_fidelite AS nb_pts_fidelite_a_date
+FROM DHB_PROD.HUB.D_CLI_HISTO_CLIENT 
+WHERE DATE_DEBUT <= DATE($dtfin_jclub)
+AND (DATE_FIN > DATE($dtfin_jclub) OR DATE_FIN IS NULL) AND code_client IS NOT NULL AND code_client !='0'
+
+
+
+select distinct code_client, id_indic, valeur from dhb_prod.hub.d_cli_histo_indicateur where id_indic in (191, 198)
+and id_org_enseigne in (1, 3)
+and code_client = '035790002291' limit 1000;
+
+
+WITH tab_a AS (SELECT DISTINCT CODE_CLIENT, id_indic AS id_indic_a, libelle_indicateur AS libelle_indicateur_a, valeur AS valeur_a , DATE_DEBUT, DATE_FIN
+FROM dhb_prod.hub.d_cli_histo_indicateur 
+WHERE DATE_DEBUT <= DATE($dtfin_jclub)
+AND (DATE_FIN > DATE($dtfin_jclub) OR DATE_FIN IS NULL) AND code_client IS NOT NULL AND code_client !='0'
+AND id_indic IN (191) ),
+tab_b AS (SELECT DISTINCT CODE_CLIENT, id_indic AS id_indic_b, libelle_indicateur AS libelle_indicateur_b, valeur AS valeur_b
+FROM dhb_prod.hub.d_cli_histo_indicateur 
+WHERE DATE_DEBUT <= DATE($dtfin_jclub)
+AND (DATE_FIN > DATE($dtfin_jclub) OR DATE_FIN IS NULL) AND code_client IS NOT NULL AND code_client !='0'
+AND id_indic IN (198) )
+SELECT a.CODE_CLIENT, id_indic_a, libelle_indicateur_a, valeur_a , id_indic_b, libelle_indicateur_b, valeur_b, DATE_DEBUT, DATE_FIN
+FROM tab_a a 
+INNER JOIN tab_b b ON a.CODE_CLIENT=b.CODE_CLIENT ; 
+
+
+
