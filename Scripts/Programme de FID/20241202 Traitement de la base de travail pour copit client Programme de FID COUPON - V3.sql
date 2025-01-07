@@ -1124,11 +1124,11 @@ LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.stat_globale_C_N a ON sb.LIB_CODE_AM=a.LIB_
 LEFT JOIN DATA_MESH_PROD_CLIENT.WORK.stat_globale_C_Nm1 b ON sb.LIB_CODE_AM=b.LIB_CODE_AM AND sb.CODE_AM=b.CODE_AM AND sb.TYPO=b.TYPO AND sb.MODALITE=b.MODALITE
 ORDER BY 1,2,3,4;
 
-CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_NOVEMBRE24 as
+CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_MAI24 as
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FID_COUPON 
 ORDER BY 1,2,3,4; 
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_NOVEMBRE24 ORDER BY 1,2,3,4;
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_MAI24 ORDER BY 1,2,3,4;
 
 
 /*** Enregistrement des tables ***/
@@ -1139,14 +1139,13 @@ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_NOVEMBRE24 ORDER BY 1,
 -- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_JUILLET24 ORDER BY 1,2,3,4;
 -- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_AOUT24 ORDER BY 1,2,3,4;
 -- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_MAI24 ORDER BY 1,2,3,4;
+-- SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_NOVEMBRE24 ORDER BY 1,2,3,4;
 
 /*
 CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.stat_globale_COUPON_FID_JULES2024 AS
-SELECT * FROM 
+SELECT *, DATE(DATE_CALCUL + 1) as DATE_OBSERVATION  FROM 
 ( 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE24
-UNION
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_SEPTEMBRE24
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_MAI24
 UNION
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_JUIN24
 UNION
@@ -1154,7 +1153,11 @@ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_JUILLET24
 UNION
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_AOUT24
 UNION
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_MAI24
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_SEPTEMBRE24
+UNION
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_OCTOBRE24
+UNION
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_globale_FIN_NOVEMBRE24
 )
 ORDER BY DATE_CALCUL,1,2,3,4; 
 
@@ -1244,7 +1247,35 @@ where vd.date_ticket BETWEEN DATE($dtdeb) AND DATE($dtfin)
  
  SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb; 
 
-
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.stat_ticket_glb_Famxts AS
+SELECT * FROM 
+(SELECT '00_GLOBAL' AS typo_clt, '00_GLOBAL' AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb 
+ GROUP BY 1,2
+ UNION
+SELECT '01-FAMILLE_PRODUITS' AS typo_clt,  
+ CASE WHEN LIB_FAMILLE_ACHAT IS NULL OR LIB_FAMILLE_ACHAT='Marketing' THEN 'Z-NC/NR' ELSE LIB_FAMILLE_ACHAT END AS modalite 
+     ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb 
+ GROUP BY 1,2)
+ ORDER BY 1,2 ;
+ 
+Select * FROM DATA_MESH_PROD_RETAIL.WORK.stat_ticket_glb_Famxts ORDER BY 1,2 ;   
+ 
+ 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.stat_ticket_glb AS
 SELECT * FROM 
 (SELECT '00_GLOBAL' AS gp_clt, '00_GLOBAL' AS typo_clt, '00_GLOBAL' AS modalite 
@@ -1578,5 +1609,235 @@ ORDER BY 1,2,3,4;
 
 
 SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.Stat_ticket_XTS ORDER BY 1,2,3,4;
+
+*/
+
+--- information sur N-1 
+/*
+Select * FROM FROM DATA_MESH_PROD_RETAIL.WORK.tab_coupon_ticket_Nm1 
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 AS 
+WITH tag_am AS ( SELECT DISTINCT CODE_CLIENT , 
+ MAX(CASE WHEN CODE_AM ='101623' AND ID_TICKET IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY CODE_CLIENT) AS  top_AM101623, 
+ MAX(CASE WHEN CODE_AM ='130146' AND ID_TICKET IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY CODE_CLIENT) AS  top_AM130146,
+ MAX(CASE WHEN CODE_AM ='130147' AND ID_TICKET IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY CODE_CLIENT) AS  top_AM130147,
+ MAX(CASE WHEN CODE_AM ='130148' AND ID_TICKET IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY CODE_CLIENT) AS  top_AM130148,
+ MAX(CASE WHEN CODE_AM ='108250' AND ID_TICKET IS NOT NULL THEN 1 ELSE 0 END) OVER (PARTITION BY CODE_CLIENT) AS  top_AM108250
+FROM DATA_MESH_PROD_RETAIL.WORK.tab_coupon_ticket_Nm1 
+WHERE ID_TICKET IS NOT NULL ),
+segrfm AS (SELECT DISTINCT CODE_CLIENT, ID_MACRO_SEGMENT , LIB_MACRO_SEGMENT 
+FROM DATA_MESH_PROD_CLIENT.SHARED.DMD_SEGMENT_RFM
+WHERE DATE_DEBUT <= DATE($dtfin_Nm1)
+AND (DATE_FIN > DATE($dtfin_Nm1) OR DATE_FIN IS NULL) ),
+segomni AS (SELECT DISTINCT CODE_CLIENT, LIB_SEGMENT_OMNI 
+FROM DATA_MESH_PROD_CLIENT.SHARED.DMD_SEGMENT_OMNI 
+WHERE DATE_DEBUT <= DATE($dtfin_Nm1)
+AND (DATE_FIN > DATE($dtfin_Nm1) OR DATE_FIN IS NULL) )
+Select DISTINCT  vd.CODE_CLIENT,
+vd.ID_ORG_ENSEIGNE, vd.ID_MAGASIN, vd.CODE_MAGASIN AS mag_achat, vd.CODE_CAISSE, vd.CODE_DATE_TICKET, vd.CODE_TICKET, vd.date_ticket, 
+vd.CODE_SKU, vd.Code_RCT,lib_famille_achat, vd.lib_magasin, CONCAT( vd.CODE_MAGASIN,'_',lib_magasin) AS nom_mag,
+vd.MONTANT_TTC, vd.code_pays,
+vd.code_ligne, vd.type_ligne, vd.libelle_type_ligne, 
+vd.code_type_article, vd.code_ligne_taille, vd.code_grille_taille, vd.code_coloris, vd.code_marque,
+CONCAT(vd.CODE_REFERENCE,'_',vd.CODE_COLORIS) AS REFCO,
+vd.prix_unitaire, 
+MONTANT_REMISE_OPE_COMM, vd.montant_remise,
+vd.montant_remise + MONTANT_REMISE_OPE_COMM AS M_remise,
+vd.QUANTITE_LIGNE,
+vd.MONTANT_MARGE_SORTIE,
+vd.libelle_type_ticket, 
+vd.id_ticket,
+TYPE_EMPLACEMENT,
+SUM(CASE WHEN lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') THEN QUANTITE_LIGNE END ) OVER (PARTITION BY id_ticket) AS Qte_pos,
+CASE WHEN type_emplacement IN ('EC','MP') THEN 'WEB'
+WHEN type_emplacement IN ('PAC','CC', 'CV','CCV') THEN 'MAG' END AS PERIMETRE,     
+CASE 
+    WHEN PERIMETRE = 'WEB' AND libelle_type_ligne ='Retour' THEN 1 
+    WHEN EST_MDON_CKDO=True THEN 1 
+    WHEN REFCO IN (select distinct CONCAT(ID_REFERENCE,'_',ID_COULEUR) 
+                    from DHB_PROD.DNR.DN_PRODUIT
+                   where ID_TYPE_ARTICLE<>1
+                    and id_marque='JUL')
+      THEN 1         
+    ELSE 0 END AS annul_ticket, 
+    top_AM101623, top_AM130146, top_AM130147, top_AM130148, top_AM108250, 
+g.ID_MACRO_SEGMENT , g.LIB_MACRO_SEGMENT, f.LIB_SEGMENT_OMNI, 
+CASE WHEN g.id_macro_segment = '01' THEN '01_VIP' 
+     WHEN g.id_macro_segment = '02' THEN '02_TBC'
+     WHEN g.id_macro_segment = '03' THEN '03_BC'
+     WHEN g.id_macro_segment = '04' THEN '04_MOY'
+     WHEN g.id_macro_segment = '05' THEN '05_TAP'
+     WHEN g.id_macro_segment = '06' THEN '06_TIEDE'
+     WHEN g.id_macro_segment = '07' THEN '07_TPURG'
+     WHEN g.id_macro_segment = '09' THEN '08_NCV'
+     WHEN g.id_macro_segment = '08' THEN '09_NAC'
+     WHEN g.id_macro_segment = '10' THEN '10_INA12'
+     WHEN g.id_macro_segment = '11' THEN '11_INA24'
+  ELSE '12_NOSEG' END AS SEGMENT_RFM ,
+  CASE WHEN f.LIB_SEGMENT_OMNI='OMNI' THEN '03-OMNI'
+       WHEN f.LIB_SEGMENT_OMNI='MAG' THEN '01-MAG'
+       WHEN f.LIB_SEGMENT_OMNI='WEB' THEN '02-WEB'
+       ELSE '09-NR/NC' END AS SEGMENT_OMNI
+from DHB_PROD.DNR.DN_VENTE vd
+LEFT JOIN tag_am tg ON vd.CODE_CLIENT=tg.CODE_CLIENT
+LEFT JOIN segrfm g ON vd.CODE_CLIENT=g.CODE_CLIENT 
+LEFT JOIN segomni f ON vd.CODE_CLIENT=f.CODE_CLIENT 
+where vd.date_ticket BETWEEN DATE($dtdeb_Nm1) AND DATE($dtfin_Nm1) 
+  and vd.ID_ORG_ENSEIGNE IN ($ENSEIGNE1 , $ENSEIGNE2)
+  and vd.code_pays IN  ($PAYS1 ,$PAYS2)
+  AND  lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','')
+  AND VD.CODE_CLIENT IS NOT NULL AND VD.CODE_CLIENT !='0' ; 
+ 
+ SELECT * FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1; 
+
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_RETAIL.WORK.stat_ticket_glb_Nm1 AS
+SELECT * FROM 
+(SELECT '00_GLOBAL' AS gp_clt, '00_GLOBAL' AS typo_clt, '00_GLOBAL' AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 
+ GROUP BY 1,2,3 
+ UNION 
+ SELECT '00_GLOBAL' AS gp_clt, '00_GLOBAL' AS typo_clt, SEGMENT_RFM AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 
+ GROUP BY 1,2,3
+  UNION
+ SELECT '01-ANNIVERSAIRE' AS gp_clt, 'CODE_AM101623' AS typo_clt, '00_GLOBAL' AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 
+ WHERE top_AM101623=1
+ GROUP BY 1,2,3  
+  UNION
+ SELECT '01-ANNIVERSAIRE' AS gp_clt, 'CODE_AM101623' AS typo_clt, SEGMENT_RFM AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 
+ WHERE top_AM101623=1
+ GROUP BY 1,2,3 
+  UNION 
+ SELECT '02-CHEQUE_FID' AS gp_clt, 'CODE_AM130146' AS typo_clt, '00_GLOBAL' AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 
+ WHERE top_AM130146=1 
+ GROUP BY 1,2,3 
+ UNION 
+ SELECT '02-CHEQUE_FID' AS gp_clt, 'CODE_AM130146' AS typo_clt, SEGMENT_RFM AS modalite 
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1 
+ WHERE top_AM130146=1 
+ GROUP BY 1,2,3
+  UNION 
+ SELECT '03-BIENVENUE' AS gp_clt, 'CODE_AM130147' AS typo_clt, '00_GLOBAL' AS modalite
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1  
+ WHERE top_AM130147=1
+ GROUP BY 1,2,3 
+   UNION 
+ SELECT '03-BIENVENUE' AS gp_clt, 'CODE_AM130147' AS typo_clt, SEGMENT_RFM AS modalite
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1  
+ WHERE top_AM130147=1
+ GROUP BY 1,2,3
+  UNION 
+ SELECT '03-BIENVENUE' AS gp_clt, 'CODE_AM130148' AS typo_clt, '00_GLOBAL' AS modalite
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1  
+ WHERE top_AM130148=1
+ GROUP BY 1,2,3
+   UNION 
+ SELECT '03-BIENVENUE' AS gp_clt, 'CODE_AM130148' AS typo_clt, SEGMENT_RFM AS modalite
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1  
+ WHERE top_AM130148=1
+ GROUP BY 1,2,3
+   UNION 
+ SELECT '04-J_PRIVILEGE' AS gp_clt, 'CODE_AM108250' AS typo_clt, '00_GLOBAL' AS modalite
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1  
+ WHERE top_AM108250=1
+ GROUP BY 1,2,3
+  UNION 
+ SELECT '04-J_PRIVILEGE' AS gp_clt, 'CODE_AM108250' AS typo_clt, SEGMENT_RFM AS modalite
+    ,COUNT( DISTINCT CODE_CLIENT) AS nb_clt
+    ,COUNT( DISTINCT id_ticket) AS nb_ticket
+    ,SUM(MONTANT_TTC ) AS CA
+	,SUM(QUANTITE_LIGNE) AS qte_achete
+    ,SUM(MONTANT_MARGE_SORTIE) AS Marge
+    ,SUM(montant_remise) AS Mnt_remise_mkt
+   ,SUM(M_remise) AS Mnt_remise_glb
+ FROM DATA_MESH_PROD_RETAIL.WORK.base_ticket_glb_Nm1  
+ WHERE top_AM108250=1
+ GROUP BY 1,2,3 )
+ ORDER BY 1,2,3 ; 
+
+
+Select * FROM DATA_MESH_PROD_RETAIL.WORK.stat_ticket_glb_Nm1  ORDER BY 1,2,3 ; 
+
 
 

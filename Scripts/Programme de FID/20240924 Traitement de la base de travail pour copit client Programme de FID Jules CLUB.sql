@@ -1,6 +1,6 @@
 -- Traitement de la base de travail pour copit client Programme de FID Jules CLUB
 
-SET dtfin_jclub = '2024-10-01';  -- Date de Calcul de la population Jules Club avec Activité sur les 12 derniers mois 
+SET dtfin_jclub = '2024-12-01';  -- Date de Calcul de la population Jules Club avec Activité sur les 12 derniers mois 
 -- Date à partir du 
 SET dtdeb_jclub = to_date(dateadd('year', -1, $dtfin_jclub));
 
@@ -10,7 +10,6 @@ SET PAYS1 = 'FRA'; --code_pays = 'FRA' ...
 SET PAYS2 = 'BEL'; --code_pays = 'BEL'
 
 SELECT $dtdeb_jclub, $dtfin_jclub, $ENSEIGNE1, $ENSEIGNE2, $PAYS1, $PAYS2;
-
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.infotick_jclub AS 
 WITH tickets as (
@@ -1740,7 +1739,7 @@ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_M LIMIT 10 ;
 
 -- Changement des noms de variable pour la table N
 
-CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_OCTOBRE24 AS 
+CREATE OR REPLACE TABLE DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_DECEMBRE24 AS 
 WITH oldtab AS (
 SELECT DESCRIP,	TYPE_MAG,	T_CLIENT,	LIB_STATUT_CLIENT,	STATUT_CLIENT,	TYPO,	MODALITE,
 NB_CLIENT  as  NB_CLIENT_Nm1,
@@ -1785,9 +1784,11 @@ FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_M a
 LEFT JOIN oldtab b ON a.Descrip=b.Descrip  AND a.type_mag=b.type_mag AND  a.t_client=b.t_client AND  a.Lib_Statut_client=b.Lib_Statut_client AND  a.Statut_client=b.Statut_client AND  a.Typo=b.Typo AND  a.modalite=b.modalite ; 
 
 
-SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_OCTOBRE24 ORDER BY 1,2,3,4,5,6,7 ; 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_DECEMBRE24 ORDER BY 1,2,3,4,5,6,7 ; 
 
 
+/* 
+ * 
 
 CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_GBLDFT AS 
 SELECT * FROM (  
@@ -1806,6 +1807,10 @@ SELECT * FROM (
  SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_SEPTEMBRE24
  UNION
  SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_OCTOBRE24 
+ UNION
+ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_NOVEMBRE24
+ UNION
+ SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_DECEMBRE24 
 )
 ORDER BY 1,2,3,4,5,6,7 ; 
 
@@ -1841,7 +1846,7 @@ ORDER BY 1,2,3,4,5,6,7 ;
 
 */
 
- 
+ /*
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Statclt_jclub_FINAL 
 WHERE DATE_CALCUL ='2024-10-01'ORDER BY 1,2,3,4,5,6,7 ; 
 MODALITE = '00-Global' AND LIB_STATUT_CLIENT = '00-Global' AND TYPE_MAG = '00-GLOBAL'

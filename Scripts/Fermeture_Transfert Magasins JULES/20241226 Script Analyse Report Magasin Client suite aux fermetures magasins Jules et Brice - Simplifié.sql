@@ -226,6 +226,167 @@ ORDER BY 1,2);
 SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.stat_GLB_histo_18mth ORDER BY 1,2; 
 
 
+-- information sur les achats futurs des clients 
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext AS
+WITH infoclt AS ( SELECT DISTINCT IDORGENS_ACHAT AS ens_ferm, IDMAG_ACHAT AS idmag_ferm, TYPE_EMPLACEMENT, LIB_entite,
+TYPE_FERM, LIB_ENSEIGNE, GPE_COLLECTIONNING, DATE_OUVERTURE_PUBLIC, DATE_FERMETURE_ETUDE,
+SURFACE_COMMERCIALE, PERIODE_ETUD, CODE_CLIENT AS id_client,
+dateadd('month', +18, date_fermeture_etude) AS DTE_PERIODE_NEXT
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_histo_18mth ),
+tickets as (
+SELECT DISTINCT CODE_CLIENT,
+vd.ID_ORG_ENSEIGNE AS idorgens_achat, vd.ID_MAGASIN AS idmag_achat, vd.CODE_MAGASIN AS mag_achat, vd.CODE_CAISSE, vd.CODE_DATE_TICKET, vd.CODE_TICKET, vd.date_ticket, 
+vd.CODE_SKU, vd.Code_RCT,lib_famille_achat, vd.lib_magasin, CONCAT( vd.CODE_MAGASIN,'_',lib_magasin) AS nom_mag,
+vd.MONTANT_TTC, vd.code_pays,
+vd.code_ligne, vd.type_ligne, vd.libelle_type_ligne, 
+vd.code_type_article, vd.code_ligne_taille, vd.code_grille_taille, vd.code_coloris, vd.code_marque,
+CONCAT(vd.CODE_REFERENCE,'_',vd.CODE_COLORIS) AS REFCO,
+vd.prix_unitaire, vd.montant_remise, MONTANT_REMISE_OPE_COMM,
+vd.montant_remise + MONTANT_REMISE_OPE_COMM AS remise_totale,
+vd.QUANTITE_LIGNE,
+vd.MONTANT_MARGE_SORTIE,
+vd.libelle_type_ticket, 
+vd.id_ticket,
+vd.TYPE_EMPLACEMENT AS TYPE_EMPLACEMENT_ACHAT,
+SUM(CASE WHEN lib_famille_achat NOT IN ('SERVICES', 'Marketing', 'Marketing Boy','Marketing Girl','SERVICES','Service','') THEN QUANTITE_LIGNE END ) OVER (PARTITION BY id_ticket) AS Qte_pos,
+CASE WHEN vd.type_emplacement IN ('EC','MP') THEN 'WEB'
+WHEN vd.type_emplacement IN ('PAC','CC', 'CV','CCV') THEN 'MAG' END AS PERIMETRE_ACHAT,     
+CASE 
+    WHEN PERIMETRE_ACHAT = 'WEB' AND libelle_type_ligne ='Retour' THEN 1 
+    WHEN EST_MDON_CKDO=True THEN 1 
+    WHEN REFCO IN (select distinct CONCAT(ID_REFERENCE,'_',ID_COULEUR) 
+                    from DHB_PROD.DNR.DN_PRODUIT
+                   where ID_TYPE_ARTICLE<>1
+                    and id_marque='JUL')
+      THEN 1         
+    ELSE 0 END AS annul_ticket
+from DATA_MESH_PROD_RETAIL.WORK.DN_VENTE vd
+INNER  JOIN infoclt mag ON vd.code_client = mag.id_client
+where vd.date_ticket BETWEEN dateadd('day', +1, mag.date_fermeture_etude) AND dateadd('month', +18, mag.date_fermeture_etude) -- ON analyse les ventes sur les 18 mois avant la date de fermeture 
+  and (vd.ID_ORG_ENSEIGNE = $ENSEIGNE1 or vd.ID_ORG_ENSEIGNE = $ENSEIGNE2)
+  and (vd.code_pays = $PAYS1 or vd.code_pays = $PAYS2) AND vd.date_ticket <= $dtfin) 
+  SELECT DISTINCT mag.*, tic.*  
+,CASE WHEN tic.date_ticket<=date_fermeture_etude THEN NULL ELSE datediff(MONTH ,date_fermeture_etude,tic.date_ticket) END AS delai_reachat
+FROM infoclt mag
+LEFT JOIN tickets tic ON mag.id_client=tic.CODE_CLIENT AND date_ticket BETWEEN dateadd('day', +1, date_fermeture_etude) AND DTE_PERIODE_NEXT; 
+  
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext ORDER BY 1;  
+
+/*** Statistiques Magasin par magasin ***/ 
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext ; 
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.statmag_18mthnext AS
+SELECT ens_ferm, idmag_ferm, idorgens_achat, idmag_achat,lib_magasin, PERIMETRE_achat   
+,min(Date_ticket) AS min_dtHA_ticket_clt
+,max(Date_ticket) AS max_dtHA_ticket_clt
+,Count(DISTINCT code_client) AS nbclt_mag
+,Count(DISTINCT id_ticket) AS nb_ticket_mag
+,SUM(MONTANT_TTC ) AS CA_mag
+,SUM(QUANTITE_LIGNE ) AS qte_achete_clt
+,SUM(MONTANT_MARGE_SORTIE ) AS Marge_clt	
+,SUM(montant_remise ) AS Mnt_remise_clt
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_ticket_18mthnext
+GROUP BY ens_ferm, idmag_ferm, idorgens_achat, idmag_achat,lib_magasin, PERIMETRE_achat ;
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.statmag_18mthnext ORDER BY 1,2;
+
+--- Table distance Magasin 
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tab_mag_distance AS
+WITH tab0 AS ( 
+SELECT  DISTINCT ID_ORG_ENSEIGNE AS id_enseigne_a, 
+ID_MAGASIN AS id_magasin_a, 
+type_emplacement AS type_emplacement_a,
+code_magasin AS code_magasin_a, 
+lib_magasin AS lib_magasin_a, 
+latitude AS latitude_a, 
+longitude AS longitude_a
+FROM DATA_MESH_PROD_RETAIL.HUB.DMD_MAGASIN
+WHERE (ID_ORG_ENSEIGNE = $ENSEIGNE1 or ID_ORG_ENSEIGNE = $ENSEIGNE2) AND (code_pays = $PAYS1 or code_pays = $PAYS2) AND type_emplacement IN ('PAC','CC', 'CV','CCV')),
+tab1 AS ( 
+SELECT  DISTINCT ID_ORG_ENSEIGNE AS id_enseigne_b, 
+ID_MAGASIN AS id_magasin_b, 
+type_emplacement AS type_emplacement_b,
+code_magasin AS code_magasin_b, 
+lib_magasin AS lib_magasin_b, 
+latitude AS latitude_b, 
+longitude AS longitude_b
+FROM DATA_MESH_PROD_RETAIL.HUB.DMD_MAGASIN 
+WHERE (ID_ORG_ENSEIGNE = $ENSEIGNE1 or ID_ORG_ENSEIGNE = $ENSEIGNE2) AND (code_pays = $PAYS1 or code_pays = $PAYS2) AND type_emplacement IN ('PAC','CC', 'CV','CCV') )
+SELECT DISTINCT a.*,b.*
+,concat(id_enseigne_a,'_',id_magasin_a,'_',id_enseigne_b,'_',id_magasin_b) AS id_ref_mag
+,(ST_DISTANCE(ST_MAKEPOINT(longitude_a, latitude_a), ST_MAKEPOINT(longitude_b, latitude_b))) / 1000  AS distanc_mag
+FROM tab0 a, tab1 b;
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_distance ;
+
+
+/***** Statistiques des ventes par mag mag ***/
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v AS
+WITH tab0 AS (SELECT DISTINCT id_ref_mag,distanc_mag 
+FROM DATA_MESH_PROD_CLIENT.WORK.tab_mag_distance),
+tab1 AS (SELECT *, 
+concat(ens_ferm,'_',idmag_ferm,'_',IDORGENS_ACHAT,'_',IDMAG_ACHAT) AS id_ref_mag_achat
+FROM DATA_MESH_PROD_CLIENT.WORK.statmag_18mthnext)
+SELECT a.*, ROUND(b.distanc_mag) AS distanc_mag
+FROM tab1 a 
+LEFT JOIN tab0 b ON a.id_ref_mag_achat=b.id_ref_mag;
+
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v ORDER BY 1,2 , nbclt_mag desc ; 
+
+-- rajout des elements sur le nombre de client potentiel et le nombre de client activés au global 
+SELECT * FROM DATA_MESH_PROD_CLIENT.WORK.Stat_react_client_mag ORDER BY 1,2 ;
+
+
+CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v2 AS
+WITH react AS (SELECT DISTINCT ens_ferm, idmag_ferm,type_emplacement, lib_entite AS lib_magasin_ferm, type_ferm, date_fermeture_etude, nb_client_potentiel, nbclt_actif FROM DATA_MESH_PROD_CLIENT.WORK.Stat_react_client_mag ORDER BY 1,2 )
+SELECT a.*, b.type_emplacement, b.lib_magasin_ferm, b.type_ferm, b.date_fermeture_etude, b.nb_client_potentiel, b.nbclt_actif
+FROM DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v a 
+LEFT JOIN react b ON a.ens_ferm=b.ens_ferm AND a.idmag_ferm=b.idmag_ferm ; 
+
+-- ranger les information et déduire le top 10 pour chaque Magasins 
+
+SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v2 ; 
+
+ CREATE OR REPLACE TEMPORARY TABLE DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v3 AS
+ WITH tab0 AS (SELECT DISTINCT 
+ ens_ferm, idmag_ferm, lib_magasin_ferm,
+type_ferm, date_fermeture_etude, idorgens_achat, idmag_achat, lib_magasin AS lib_magasin_achat, perimetre_achat, distanc_mag, 
+nb_client_potentiel, nbclt_actif, nbclt_mag, nb_ticket_mag, ca_mag, 
+qte_achete_clt, marge_clt, mnt_remise_clt
+FROM tabclt_ticket_18mthnext_v2  ),
+tab1 AS (SELECT *, 
+rank() over(partition by idmag_ferm order by nbclt_mag DESC) as rang_mag,
+ROW_NUMBER() over(partition by idmag_ferm order by nbclt_mag DESC) as lign_mag
+ FROM tab0)
+SELECT DISTINCT  ens_ferm, idmag_ferm, lib_magasin_ferm,
+type_ferm, date_fermeture_etude, idorgens_achat, idmag_achat, lib_magasin_achat, perimetre_achat, distanc_mag, 
+nb_client_potentiel, nbclt_actif, nbclt_mag, nb_ticket_mag, ca_mag, 
+qte_achete_clt, marge_clt, mnt_remise_clt, lign_mag 
+FROM tab1 
+-- WHERE lign_mag<=10
+;
+
+SELECT * FROM  DATA_MESH_PROD_CLIENT.WORK.tabclt_ticket_18mthnext_v3 order BY idmag_ferm , nbclt_mag DESC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

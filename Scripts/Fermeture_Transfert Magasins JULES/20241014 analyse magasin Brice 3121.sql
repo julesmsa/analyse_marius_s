@@ -26,8 +26,8 @@ SET PAYS1 = 'FRA'; --code_pays = 'FRA' ...
 SET PAYS2 = 'BEL'; --code_pays = 'BEL' 
 
 -- Date de fin ticket pour avoir des données stables 
-SET dtfin = DAte('2024-10-01'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
-SET dtdeb = to_date(dateadd('year', -1, $dtfin)) ;
+SET dtfin = Date('2024-12-01'); -- to_date(dateadd('year', +1, $dtdeb_EXON))-1 ;  -- CURRENT_DATE();
+SET dtdeb = Date('2023-10-01');
 SET idmag_etude = 3121 ; 
 SET idmag_cible = 113 ; 
 SELECT $dtfin,  $dtdeb, $idmag_etude, $idmag_cible ;
